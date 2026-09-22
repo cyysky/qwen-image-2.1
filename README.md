@@ -289,6 +289,30 @@ curl -s http://127.0.0.1:7853/v1/images/generations \
        "num_inference_steps":40,"seed":42}'
 ```
 
+There is no SDK to learn: the enhancer is a plain vLLM OpenAI chat endpoint, so
+curl is the whole API. The system prompt is a 10 KB file that ships with the
+checkpoint, so build the body with `jq` rather than quoting it by hand:
+
+```bash
+jq -n --rawfile sp models/Qwen-Image-2.1-PE-T2I/system_prompt.txt \
+      --arg user "a corgi playing guitar in the rain" \
+  '{model:"Qwen/Qwen-Image-2.1-PE-T2I",
+    messages:[{role:"system",content:$sp},{role:"user",content:$user}],
+    temperature:1.0, top_p:0.95, top_k:20, min_p:0.0, presence_penalty:1.5,
+    max_tokens:16256, seed:42, stream:false}' \
+| curl -s http://127.0.0.1:8104/v1/chat/completions \
+    -H 'Content-Type: application/json' -d @- \
+| jq -r '.choices[0].message.content'
+```
+
+That is the same request the client sends, and it returned the same record in
+**20 s** with `usage.completion_tokens` 1095 (2,441 chars of thinking, 2,847 of
+answer). Read the answer from `.choices[0].message.content`; the thinking block
+arrives in `.message.reasoning` on vLLM 0.27.1, and the client also accepts
+`reasoning_content`, so either name works. Add `"stream": true` and read
+`.choices[0].delta.content` to get the rewrite incrementally instead of waiting
+out the thinking block.
+
 Notes from using it, most of them learned the hard way:
 
 * **One prompt per call, or a JSONL batch.** The client takes exactly one of a
@@ -304,6 +328,14 @@ Notes from using it, most of them learned the hard way:
   `{id, task, raw_prompt, task_type, thinking, positive_prompt, negative_prompt,
   wh_ratio, ratio_follow, parse_ok}`. `parse_ok: true` is the pass/fail signal;
   `negative_prompt` has come back empty on every t2i prompt tried.
+* **The sampling numbers are per task and are not interchangeable.** `top_k` and
+  `min_p` are vLLM extensions rather than OpenAI fields, so they go at the top
+  level of the body. `presence_penalty` is 1.5 for t2i and 0 for edit, and
+  `max_tokens` is 16256 vs 24000. A wrong penalty does not fail - it quietly
+  changes the distribution you sample from. `chat_template_kwargs:
+  {"enable_thinking": true}`, which the client sends, makes no difference here:
+  the template only skips the thinking block when `enable_thinking` is explicitly
+  false, and the answer came back byte-identical without it.
 * **Text strings survive, hex colours do not.** On a dense 35-string infographic
   prompt every quoted string came back verbatim, including the long metric lines, and
   the model kept the requested 2:3 ratio without being told twice. It does rewrite
