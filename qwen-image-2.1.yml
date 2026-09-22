@@ -53,7 +53,7 @@ services:
       --host 0.0.0.0
       --port 7853
       --tp-size 1
-      ${SGLANG_OFFLOAD_ARGS:---performance-mode manual --dit-layerwise-offload true --layerwise-offload-components dit text_encoder image_encoder vae --vae-tiling true}
+      ${SGLANG_OFFLOAD_ARGS:---performance-mode manual --dit-layerwise-offload true --layerwise-offload-components dit text_encoder image_encoder vae --vae-tiling false}
       --output-path /sgl-workspace/sglang/outputs
       '
     environment:
