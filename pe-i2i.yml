@@ -1,0 +1,151 @@
+# Prompt enhancer for *image editing* (Qwen-Image-2.1-PE-I2I) on GPU 0.
+#
+# This replaces pe-t2i.yml, which has been torn down: the two checkpoints are the
+# same Qwen3.5-VL 9B hybrid architecture (~18.8 GB bf16) and neither card nor
+# budget fits both, so only one host runs at a time. Recreate the T2I one with
+# `sudo docker compose -f pe-t2i.yml up -d` when you need it back.
+#
+# Same shape as the T2I host: upstream ships the prompt rewriter as a separate
+# model, not as part of the SGLang image service (`prompt_rewrite/`), and it is
+# served here as a plain vLLM OpenAI-compatible chat endpoint. The *client*
+# supplies the task system prompt. This checkpoint's own `system_prompt.txt` (18 KB)
+# is the edit prompt and is byte-identical to
+# `prompt_rewrite/prompts/system_prompt_edit.txt`, so the usual invocation is
+# `client.py --task edit --system-prompt models/Qwen-Image-2.1-PE-I2I/system_prompt.txt`.
+#
+# Checkpoint: models/Qwen-Image-2.1-PE-I2I, downloaded with
+#   hf download Qwen/Qwen-Image-2.1-PE-I2I --local-dir models/Qwen-Image-2.1-PE-I2I
+#
+# Run:
+#   cd /home/aiserver/qwen-image-2.1
+#   sudo docker compose -f pe-i2i.yml up -d
+#   curl -sf http://127.0.0.1:8105/health && echo ok
+#
+# Then, from the upstream prompt_rewrite/ client:
+#   python3 client.py --task edit --model Qwen/Qwen-Image-2.1-PE-I2I \
+#     --system-prompt prompts/system_prompt_edit.txt --port 8105 \
+#     --image data/images/1549226_a.png "make the sky a sunset"
+#
+# curl works too, and it is the whole API. `edit` is the same chat completion as
+# t2i, plus image parts in the user message; build the body with jq so the 18 KB
+# system prompt and the base64 image are never quoted by hand:
+#
+#   jq -n --rawfile sp models/Qwen-Image-2.1-PE-I2I/system_prompt.txt \
+#         --rawfile img <(base64 -w0 data/images/1549226_a.png) \
+#     '{model:"Qwen/Qwen-Image-2.1-PE-I2I",
+#       messages:[{role:"system",content:$sp},
+#                  {role:"user",content:[{type:"image_url",
+#                     image_url:{url:("data:image/png;base64,"+$img)}},
+#                    {type:"text",text:"make the sky a sunset"}]}],
+#       temperature:1.0, top_p:0.95, top_k:20, min_p:0.0, presence_penalty:0.0,
+#       max_tokens:24000, seed:42, stream:false}' \
+#   | curl -s http://127.0.0.1:8105/v1/chat/completions \
+#       -H 'Content-Type: application/json' -d @- \
+#   | jq -r '.choices[0].message.content'
+#
+# That request is verified on this host, twice, and it is **not deterministic**:
+# 5,111 prompt tokens (the 18 KB system prompt plus one image) both times, but
+# 1,757 completion tokens (1,596 thinking) in **38.9 s** and 3,712 (3,467 thinking)
+# in **~73 s** on the same `seed: 42`. Sampling is temperature 1.0, so the seed does
+# not pin the answer; do not cache one rewrite and assume the next call matches.
+# Both answers came back as
+# `{"rewritten_prompt": ..., "wh_ratio": "", "ratio_follow": "<image1>"}` - for a
+# "make the sky a sunset" edit of a portrait the model kept the frame and set
+# `ratio_follow`, which is the usual edit outcome; `wh_ratio` appears when the task
+# composes a new frame instead. Budget a minute per edit, not the T2I host's minutes.
+#
+# `presence_penalty: 0.0` and `max_tokens: 24000` are the *edit* profile from
+# upstream pe_core.py and are not interchangeable with t2i's 1.5 / 16256. A wrong
+# penalty does not fail, it quietly changes the distribution you sample from.
+# `top_k` / `min_p` are vLLM extensions rather than OpenAI fields, so they go at
+# the top level of the body. Read the answer from `.choices[0].message.content`;
+# the thinking block comes back in `.message.reasoning` on vLLM 0.30.0 (the upstream
+# client also accepts `reasoning_content`, so both names work). Add `"stream": true`
+# and read `.choices[0].delta.content` to get the rewrite incrementally instead of
+# waiting out the whole thinking block.
+#
+# The edit answer carries `ratio_follow` instead of t2i's `wh_ratio` when the
+# output inherits a source image's shape, and `wh_ratio` when the model chooses a
+# new composition. Pass whichever one is set through to the renderer; dropping it
+# renders a wide composition onto a portrait canvas and silently gives a different
+# picture.
+#
+# Settings that are required rather than tuning. Numbers below are what this host
+# reported on vLLM 0.30.0; the same two settings were also required on 0.27.1, where
+# the *defaults* (0.90 util, 256 seqs) refused to start.
+# * `--gpu-memory-utilization 0.94` is 23.1 GB of the 24 GB card. vLLM charges
+#   its CUDA-graph pool against that budget and says so: 0.94 is "equivalent to
+#   0.9384 without CUDA graph memory profiling". Weights are 17.66 GiB and the KV
+#   budget lands at 2.37 GiB = 71,192 tokens, which is 1.74x the 40,960-token max
+#   sequence below, so one request at a time fits with room to spare.
+# * `--max-num-seqs 1` is the fix for the hybrid model's Mamba cache. 24 of the 32
+#   layers are linear attention, whose state lives in a fixed pool of "Mamba cache
+#   blocks" sized by the same memory budget; on 0.27.1 only 108 blocks fit at 0.94,
+#   below vLLM's default of 256, and the engine aborted with "max_num_seqs (256)
+#   exceeds available Mamba cache blocks (108)". 1 is right for a prompt rewriter - it
+#   is one request at a time anyway - and it also shrinks CUDA graph capture to
+#   0.04 + 0.02 GiB, which is what leaves room for the long sequence below.
+#   Raise it only if you need concurrency, and re-check the block count when you do.
+# * `--max-model-len 40960` rather than the T2I host's 24576, because edit is the
+#   longer task and 24576 cannot hold it: the edit profile generates up to 24000
+#   tokens (`max_new_tokens` in pe_core.py), and the input on top of that is an
+#   18 KB system prompt (~4.6k tokens) plus up to 10 images at 1024x1024, which the
+#   processor caps at ~1024 tokens each (~10.2k). ~15k in + 24000 out is ~39k, so
+#   24576 would fail on the *first* image request with "prompt + max_tokens exceeds
+#   max_model_len" rather than at load. KV is small - only 8 of 32 layers are full
+#   attention, 4 KV heads, head_dim 256, so 32 KB/token - and 40960 tokens is
+#   ~1.3 GB, so the headroom is there.
+# * `--limit-mm-per-prompt {"image": 10}` matches upstream's MAX_IMGS default. The
+#   system prompt addresses sources as <image1>..<imageN>, so multi-reference edits
+#   send several images in one request; the server rejects the request, not silently
+#   truncates, if you send more than this.
+# * `--reasoning-parser qwen3` splits the thinking block into `reasoning_content`.
+#   Without it the thinking arrives inline and the client still recovers it from the
+#   `</think>` tag, so both configurations produce the same record.
+# * `--enforce-eager` is not set: CUDA graphs capture fine on vLLM 0.30.0 for this
+#   architecture and are substantially faster (capture finished in 3 s + 1 s, and
+#   torch.compile took 18 s once, cached under /root/.cache/vllm). Add it only if
+#   capture fails.
+services:
+  pe-i2i:
+    image: vllm/vllm-openai:v0.30.0
+    container_name: qwen-pe-i2i
+    command:
+      - --model
+      - /model
+      - --served-model-name
+      - Qwen/Qwen-Image-2.1-PE-I2I
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8105"
+      - --dtype
+      - bfloat16
+      - --max-model-len
+      - "40960"
+      - --gpu-memory-utilization
+      - "0.94"
+      - --max-num-seqs
+      - "1"
+      - --limit-mm-per-prompt
+      - '{"image": 10}'
+      - --reasoning-parser
+      - qwen3
+    environment:
+      - HF_HOME=/root/.cache
+      - HF_HUB_OFFLINE=1
+      - VLLM_LOGGING_LEVEL=INFO
+    volumes:
+      - /home/aiserver/.cache/huggingface:/root/.cache/huggingface
+      - /home/aiserver/qwen-image-2.1/models/Qwen-Image-2.1-PE-I2I:/model:ro
+    ipc: host
+    shm_size: 8g
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    restart: "no"

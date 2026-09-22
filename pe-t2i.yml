@@ -52,7 +52,7 @@
 # rather than OpenAI fields, so they go at the top level of the body.
 #
 # Read the answer from .choices[0].message.content; the thinking block comes back
-# in .message.reasoning on vLLM 0.27.1 (the upstream client also accepts
+# in .message.reasoning on vLLM 0.30.0 (the upstream client also accepts
 # reasoning_content, so both names work). `chat_template_kwargs:
 # {"enable_thinking": true}` is what the upstream client sends, but it changes
 # nothing here - the template only skips the thinking block when enable_thinking is
@@ -62,28 +62,29 @@
 #
 # Notes:
 # * `--gpu-memory-utilization 0.94` is 23.1 GB of the 24 GB card. The weights are
-#   ~19 GB, and vLLM 0.27.1 reserves ~0.55 GB of CUDA graph memory inside that
-#   budget (its profiler reports 0.90 as "equivalent to 0.8771 without graph
-#   profiling"), so 0.90 left 0.8 GB of KV against the 0.81 GB a 24576-token
-#   sequence needs and the engine refused to start. KV here is small - only 8 of the
-#   32 layers are full attention, 4 KV heads, head_dim 256, so ~32 KB/token - and
-#   GPU 0 is otherwise idle, so the headroom is free. Lower it if something else
-#   lands on GPU 0.
-# * `--max-num-seqs 8` is required, not tuning. This is a hybrid model: 24 of 32
+#   ~19 GB, and vLLM reserves its CUDA-graph pool inside that budget, so 0.90
+#   left 0.8 GB of KV against the 0.81 GB a 24576-token sequence needs and the
+#   engine refused to start on 0.27.1. KV here is small - only 8 of the 32 layers
+#   are full attention, 4 KV heads, head_dim 256, so ~32 KB/token - and GPU 0 is
+#   otherwise idle, so the headroom is free. Lower it if something else lands on
+#   GPU 0.
+# * `--max-num-seqs 1` is required, not tuning. This is a hybrid model: 24 of 32
 #   layers are linear attention, whose state lives in a fixed pool of "Mamba cache
 #   blocks" sized by the same memory budget. At the 0.94 budget only 108 blocks fit,
 #   and vLLM's default max_num_seqs (256) exceeded that, so the engine aborted with
-#   "max_num_seqs (256) exceeds available Mamba cache blocks (108)". 8 is far more
-#   than a prompt rewriter needs and also shrinks CUDA graph capture, leaving more
-#   room for KV.
+#   "max_num_seqs (256) exceeds available Mamba cache blocks (108)". 1 is right for
+#   a prompt rewriter - it is one request at a time anyway - and it also shrinks
+#   CUDA graph capture, which is what leaves the KV headroom measured here: on vLLM
+#   0.30.0 the engine reported 2.34 GB of KV = 67,236 tokens, which is 2.74x the
+#   24,576-token max sequence.
 # * `--reasoning-parser qwen3` splits the  thinking block into `reasoning_content`.
 #   Without it the thinking arrives inline and the client still recovers it from the
 #   ` response` tag, so both configurations produce the same record.
-# * `--enforce-eager` is not set: CUDA graphs capture fine on vLLM 0.27.1 for this
+# * `--enforce-eager` is not set: CUDA graphs capture fine on vLLM 0.30.0 for this
 #   architecture and are substantially faster. Add it only if capture fails.
 services:
   pe-t2i:
-    image: vllm/vllm-openai:v0.27.1
+    image: vllm/vllm-openai:v0.30.0
     container_name: qwen-pe-t2i
     command:
       - --model
@@ -101,7 +102,7 @@ services:
       - --gpu-memory-utilization
       - "0.94"
       - --max-num-seqs
-      - "8"
+      - "1"
       - --limit-mm-per-prompt
       - '{"image": 10}'
       - --reasoning-parser

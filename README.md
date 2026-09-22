@@ -15,7 +15,8 @@ call it without any change beyond the base URL.
 qwen-image-2.1/
   Dockerfile          SGLang image with native Qwen-Image-2.1 support + b64 default
   qwen-image-2.1.yml  docker compose service (GPU 2, CPU offload, port 7853)
-  pe-t2i.yml          docker compose service (GPU 0, prompt enhancer, port 8104)
+  pe-i2i.yml          docker compose service (GPU 0, edit prompt enhancer, port 8105)
+  pe-t2i.yml          docker compose service (GPU 0, t2i prompt enhancer, port 8104)
   models/             Qwen/Qwen-Image-2.1 checkpoint (mounted read-only at /model)
   outputs/            generated PNGs written by the server (also saved by the bench)
   results/            benchmark JSON/CSV/PNG artifacts
@@ -274,23 +275,38 @@ maps to a canvas via `WH_RATIO_TO_SIZE` (1:1 2048x2048, 4:3 2400x1792, 3:4
 That service cannot run inside this container: `prompt_rewrite/requirements.txt`
 pins `vllm==0.19.1` and `transformers==5.4.0`, while this container ships
 transformers 5.12.1 and has no `vllm` module. It runs as a second container
-instead. `pe-t2i.yml` hosts the T2I checkpoint on the now-free GPU 0 as a plain
-vLLM OpenAI endpoint on port **8104**, with both checkpoints in
+instead. `pe-i2i.yml` hosts the **edit** checkpoint on the now-free GPU 0 as a
+plain vLLM OpenAI endpoint on port **8105**, with both checkpoints in
 `models/Qwen-Image-2.1-PE-T2I` and `models/Qwen-Image-2.1-PE-I2I` (gitignored);
-see `logs/pe-download.log`.
+see `logs/pe-download.log`. `pe-t2i.yml` is the sibling host for the T2I
+checkpoint on port **8104**; it is **not running** - the two are the same ~18.8 GB
+architecture and GPU 0 only fits one, so bring it up with
+`sudo docker compose -f pe-t2i.yml up -d` (after
+`sudo docker compose -f pe-i2i.yml down`) when you need T2I back.
 
-Two vLLM settings there are required rather than tuning. `--gpu-memory-utilization
-0.94` because vLLM 0.27.1 charges ~0.55 GB of CUDA-graph memory against the
-same budget, so 0.90 left 0.8 GB of KV against the 0.81 GB a 24576-token
-sequence needs and the engine refused to start. `--max-num-seqs 8` because this is
-a hybrid model - 24 of 32 layers are linear attention, whose state lives in a fixed
+Both hosts run `vllm/vllm-openai:v0.30.0` (current stable, released 2026-09-22) and
+both were started on it and reported healthy: I2I leaves 2.37 GiB of KV = 71,192
+tokens (1.74x the 40,960-token max sequence), T2I leaves 2.34 GiB = 67,236 tokens
+(2.74x the 24,576-token max sequence). The measurements quoted below for T2I
+were taken on 0.27.1, before the tag moved.
+
+Two vLLM settings on the I2I host are required rather than tuning, and it is the
+longer task that sets the sequence length. `--max-num-seqs 1` because this is a
+hybrid model - 24 of 32 layers are linear attention, whose state lives in a fixed
 pool of "Mamba cache blocks" - and only 108 blocks fit at that budget, below
-vLLM's default of 256, so the engine aborted with `max_num_seqs (256) exceeds
-available Mamba cache blocks (108)`.
+vLLM's default of 256, so the engine aborts with `max_num_seqs (256) exceeds
+available Mamba cache blocks (108)`. 1 is right for a prompt rewriter, and it also
+shrinks CUDA-graph capture to 0.04 + 0.02 GiB. `--gpu-memory-utilization 0.94`
+because vLLM charges its CUDA-graph pool against the same budget, which leaves
+2.37 GiB of KV = 71,192 tokens, 1.74x the 40,960-token max sequence. That max
+is 40960 rather than the T2I host's 24576 because the edit profile generates up
+to 24000 tokens (`max_new_tokens` in `pe_core.py`) and the input on top is an
+18 KB system prompt plus up to 10 images at ~1024 tokens each: 24576 would fail on
+the *first* image request with `prompt + max_tokens exceeds max_model_len`.
 
 ```bash
-sudo docker compose -f pe-t2i.yml up -d
-curl -sf http://127.0.0.1:8104/health && echo ok
+sudo docker compose -f pe-i2i.yml up -d
+curl -sf http://127.0.0.1:8105/health && echo ok
 ```
 
 The server holds the weights but **not** the task prompt, so the caller must send
@@ -298,16 +314,26 @@ it. Use the upstream client (it is what produces the JSON record):
 
 ```bash
 cd /path/to/Qwen-Image-2.1/prompt_rewrite
-python3 client.py --task t2i --model Qwen/Qwen-Image-2.1-PE-T2I \
-  --system-prompt prompts/system_prompt_t2i.txt --port 8104 \
-  "a corgi playing guitar in the rain"
+python3 client.py --task edit --model Qwen/Qwen-Image-2.1-PE-I2I \
+  --system-prompt prompts/system_prompt_edit.txt --port 8105 \
+  --image data/images/1549226_a.png "make the sky a sunset"
 ```
 
-It streams a ~16k-token thinking block, so expect minutes per prompt, and returns
-`{positive_prompt, negative_prompt, wh_ratio, parse_ok}`. Feed `positive_prompt` to
-`/v1/images/generations` and take `size` from `wh_ratio`. This host is temporary:
-`restart: "no"`, and the bonsai unit on GPU 0 is still `enable`d, so a reboot
-reclaims the card.
+`--task edit` takes 1..N images and returns
+`{positive_prompt, negative_prompt, wh_ratio, ratio_follow, parse_ok}`, where the
+model sets exactly one of `wh_ratio` (new composition) or `ratio_follow` (keep a
+source image's canvas). A verified run - "make the sky a sunset" on a portrait -
+returned `ratio_follow: "<image1>"`, and a second identical request at the same
+`seed: 42` returned a *different* rewrite: 5,111 prompt tokens both times, but
+1,757 completion tokens (1,596 thinking) in **38.9 s** and 3,712 (3,467 thinking)
+in **~73 s**. Sampling is temperature 1.0, so the seed does not pin the answer -
+do not cache one rewrite and assume the next call matches. Budget a minute per edit
+rather than the T2I host's minutes. Swap to the T2I host for
+`--task t2i`, which streams a ~16k-token thinking block and returns
+`{positive_prompt, negative_prompt, wh_ratio, parse_ok}`. Either way feed
+`positive_prompt` to `/v1/images/generations` and take `size` from `wh_ratio`
+when it is set. Both hosts are temporary: `restart: "no"`, and the bonsai unit on
+GPU 0 is still `enable`d, so a reboot reclaims the card.
 
 ### Using it in practice
 
@@ -316,8 +342,9 @@ nothing about the image service, so the caller does the render:
 
 ```bash
 # 1. rewrite (once per prompt)
-python3 client.py --task t2i --model Qwen/Qwen-Image-2.1-PE-T2I \
-  --system-prompt prompts/system_prompt_t2i.txt --port 8104 "your prompt"
+python3 client.py --task edit --model Qwen/Qwen-Image-2.1-PE-I2I \
+  --system-prompt prompts/system_prompt_edit.txt --port 8105 \
+  --image source.png "your edit instruction"
 
 # 2. render the rewrite at the size implied by wh_ratio
 curl -s http://127.0.0.1:7853/v1/images/generations \
@@ -327,25 +354,31 @@ curl -s http://127.0.0.1:7853/v1/images/generations \
 ```
 
 There is no SDK to learn: the enhancer is a plain vLLM OpenAI chat endpoint, so
-curl is the whole API. The system prompt is a 10 KB file that ships with the
-checkpoint, so build the body with `jq` rather than quoting it by hand:
+curl is the whole API. The system prompt is an 18 KB file that ships with the
+checkpoint, so build the body with `jq` rather than quoting it by hand. This is the
+I2I body; the T2I host's is the same with a plain-string user message, a 10 KB
+prompt, `presence_penalty` 1.5 and `max_tokens` 16256:
 
 ```bash
-jq -n --rawfile sp models/Qwen-Image-2.1-PE-T2I/system_prompt.txt \
-      --arg user "a corgi playing guitar in the rain" \
-  '{model:"Qwen/Qwen-Image-2.1-PE-T2I",
-    messages:[{role:"system",content:$sp},{role:"user",content:$user}],
-    temperature:1.0, top_p:0.95, top_k:20, min_p:0.0, presence_penalty:1.5,
-    max_tokens:16256, seed:42, stream:false}' \
-| curl -s http://127.0.0.1:8104/v1/chat/completions \
+jq -n --rawfile sp models/Qwen-Image-2.1-PE-I2I/system_prompt.txt \
+      --rawfile img <(base64 -w0 source.png) \
+      --arg user "make the sky a sunset" \
+  '{model:"Qwen/Qwen-Image-2.1-PE-I2I",
+    messages:[{role:"system",content:$sp},
+               {role:"user",content:[{type:"image_url",
+                  image_url:{url:("data:image/png;base64,"+$img)}},
+                 {type:"text",text:$user}]}],
+    temperature:1.0, top_p:0.95, top_k:20, min_p:0.0, presence_penalty:0.0,
+    max_tokens:24000, seed:42, stream:false}' \
+| curl -s http://127.0.0.1:8105/v1/chat/completions \
     -H 'Content-Type: application/json' -d @- \
 | jq -r '.choices[0].message.content'
 ```
 
-That is the same request the client sends, and it returned the same record in
-**20 s** with `usage.completion_tokens` 1095 (2,441 chars of thinking, 2,847 of
-answer). Read the answer from `.choices[0].message.content`; the thinking block
-arrives in `.message.reasoning` on vLLM 0.27.1, and the client also accepts
+That is the same request the client sends, and on 0.27.1 it returned the same
+record in **20 s** with `usage.completion_tokens` 1095 (2,441 chars of thinking,
+2,847 of answer). Read the answer from `.choices[0].message.content`; the thinking
+block arrives in `.message.reasoning` on vLLM 0.30.0, and the client also accepts
 `reasoning_content`, so either name works. Add `"stream": true` and read
 `.choices[0].delta.content` to get the rewrite incrementally instead of waiting
 out the thinking block.
@@ -356,11 +389,14 @@ Notes from using it, most of them learned the hard way:
   positional prompt or `--input`/`--output`, and the input record is
   `{"id": ..., "prompt": ..., "input_images": []}`. A long prompt is easier to
   pass through the JSONL than to quote on the command line.
-* **Budget 1-3 minutes per prompt.** It streams a thinking block of roughly the
-  same size as a long prompt (a 3,720-char infographic prompt produced 7,270 chars
-  of thinking and 7,614 chars of `positive_prompt` in **74 s**). Cost is per prompt,
-  not per image, and the rewrite is deterministic text you can cache and reuse for
-  every seed and step count.
+* **Budget 1-3 minutes per prompt on T2I, about a minute on edit.** It streams a
+  thinking block of roughly the same size as a long prompt (a 3,720-char infographic
+  prompt produced 7,270 chars of thinking and 7,614 chars of `positive_prompt` in
+  **74 s**). Cost is per prompt, not per image, and one rewrite can be reused for
+  every seed and step count of the *render* - but do not assume two rewrite calls
+  match: two identical edit requests at `seed: 42` returned 1,757 and 3,712 completion
+  tokens, because sampling runs at temperature 1.0 and the seed does not pin the
+  answer.
 * **`positive_prompt` is what you render, `thinking` is not.** The record is
   `{id, task, raw_prompt, task_type, thinking, positive_prompt, negative_prompt,
   wh_ratio, ratio_follow, parse_ok}`. `parse_ok: true` is the pass/fail signal;
@@ -450,9 +486,10 @@ tiling on, or add `"enable_cache_dit": true` (19.5 GB server peak), whenever
 anything else may be resident on the card.
 
 GPU 0 (llama-server `bonsai-2-27b`, ~17 GB) was stopped for this work and now
-hosts the prompt enhancer (`qwen-pe-t2i`, ~21 GB, `pe-t2i.yml`); it is still
+hosts the edit prompt enhancer (`qwen-pe-i2i`, ~21 GB, `pe-i2i.yml`); it is still
 `systemctl enable`d, so `sudo systemctl start bonsai-2-27b` brings it back and it
 will also return on reboot, which would collide with the prompt enhancer on GPU 0.
+Only one of the two prompt enhancers fits on the card at a time.
 GPU 1 (vLLM, ~17.9 GB) was not touched.
 
 ## Measurement
