@@ -15,6 +15,7 @@ call it without any change beyond the base URL.
 qwen-image-2.1/
   Dockerfile          SGLang image with native Qwen-Image-2.1 support + b64 default
   qwen-image-2.1.yml  docker compose service (GPU 2, CPU offload, port 7853)
+  pe-t2i.yml          docker compose service (GPU 0, prompt enhancer, port 8104)
   models/             Qwen/Qwen-Image-2.1 checkpoint (mounted read-only at /model)
   outputs/            generated PNGs written by the server (also saved by the bench)
   results/            benchmark JSON/CSV/PNG artifacts
@@ -89,23 +90,32 @@ The model is 33 GB on disk; the first start also fills the JIT/kernel cache.
 
 GPU 2 is shared with the existing z-image service (~1.4 GB), and a 2048x2048
 request peaks near the card's capacity, so the default streams every component
-from host RAM and tiles the VAE decode (measured 4.0 GB peak at 1024x1024, 24.7 s
-text / 25.1 s edit):
+from host RAM (measured 4.0 GB peak at 1024x1024, 24.7 s text / 25.1 s edit):
 
 ```bash
-# default (full layerwise CPU offload + VAE tiling, every endpoint works)
+# default (full layerwise CPU offload, VAE tiling off)
 --performance-mode manual --dit-layerwise-offload true \
   --layerwise-offload-components dit text_encoder image_encoder vae \
-  --vae-tiling true
+  --vae-tiling false
 ```
 
-`--vae-tiling true` is what keeps 2048x2048 alive. Without it the decode stage
-allocates ~3.6 GB in one tensor at 2K; with only ~200 MB free on the shared card
-that trips the CUDA allocator (`memory allocation failed with OOM on device 0`).
-Measured on the same prompt and seed: tiling off peaks at 21572 MB in 96.8 s with a
-logged OOM, tiling on peaks at **5768 MB** in 99.4 s with none. `--vae-cpu-offload
-true` does not help here: it moves VAE *weights*, not the activations that
-overflow, and was measured to change nothing.
+`--vae-tiling true` is the lever that pulls 2048x2048 well clear of the card's
+limit. Without it the decode stage allocates ~3.6 GB in one tensor at 2K, which sits
+right at the edge of the free memory on the shared card. Measured on the same prompt
+and seed: tiling off peaks at **21572 MB** with a logged OOM and text lost, tiling on
+peaks at **5768 MB** in 99.4 s with none. `--vae-cpu-offload true` does not help
+here: it moves VAE *weights*, not the activations that overflow, and was measured
+to change nothing.
+
+The shipped default is tiling **off** because that is what the operator verified in
+use. It leaves little headroom, so a 2K request is a coin flip depending on what
+else is resident on GPU 2 - a later 2048x2048 run peaked at 21560 MB and passed.
+Override it back on when you want the safety margin:
+
+```bash
+sudo env SGLANG_OFFLOAD_ARGS="--performance-mode manual --dit-layerwise-offload true --layerwise-offload-components dit text_encoder image_encoder vae --vae-tiling true" \
+  sudo docker compose -f qwen-image-2.1.yml up -d --force-recreate
+```
 
 `--performance-mode memory` is ~3 s (14 %) faster at 1024x1024 (20.0 s text /
 23.9 s edit) but peaks ~5 GB higher and OOMs on 2048x2048 edits. Switch recipes
@@ -224,23 +234,54 @@ an OpenAI-compatible vLLM endpoint (`prompt_rewrite/serve.sh`, port 8100). `wh_r
 maps to a canvas via `WH_RATIO_TO_SIZE` (1:1 2048x2048, 4:3 2400x1792, 3:4
 1792x2400, 3:2 2528x1696, 2:3 1696x2528, 16:9 2752x1536, 9:16 1536x2752).
 
-That service is not running yet: `prompt_rewrite/requirements.txt` pins
-`vllm==0.19.1` and `transformers==5.4.0`, while this container ships
-transformers 5.12.1 and has no `vllm` module, so the upstream `serve.sh` cannot
-run inside it. It needs a second container on the now-free GPU 0, plus a proxy in
-front of `POST /v1/images/generations` that calls the rewriter and then sets `size`
-from `wh_ratio`. Both checkpoints are downloading to
+That service cannot run inside this container: `prompt_rewrite/requirements.txt`
+pins `vllm==0.19.1` and `transformers==5.4.0`, while this container ships
+transformers 5.12.1 and has no `vllm` module. It runs as a second container
+instead. `pe-t2i.yml` hosts the T2I checkpoint on the now-free GPU 0 as a plain
+vLLM OpenAI endpoint on port **8104**, with both checkpoints in
 `models/Qwen-Image-2.1-PE-T2I` and `models/Qwen-Image-2.1-PE-I2I` (gitignored);
 see `logs/pe-download.log`.
+
+Two vLLM settings there are required rather than tuning. `--gpu-memory-utilization
+0.94` because vLLM 0.27.1 charges ~0.55 GB of CUDA-graph memory against the
+same budget, so 0.90 left 0.8 GB of KV against the 0.81 GB a 24576-token
+sequence needs and the engine refused to start. `--max-num-seqs 8` because this is
+a hybrid model - 24 of 32 layers are linear attention, whose state lives in a fixed
+pool of "Mamba cache blocks" - and only 108 blocks fit at that budget, below
+vLLM's default of 256, so the engine aborted with `max_num_seqs (256) exceeds
+available Mamba cache blocks (108)`.
+
+```bash
+sudo docker compose -f pe-t2i.yml up -d
+curl -sf http://127.0.0.1:8104/health && echo ok
+```
+
+The server holds the weights but **not** the task prompt, so the caller must send
+it. Use the upstream client (it is what produces the JSON record):
+
+```bash
+cd /path/to/Qwen-Image-2.1/prompt_rewrite
+python3 client.py --task t2i --model Qwen/Qwen-Image-2.1-PE-T2I \
+  --system-prompt prompts/system_prompt_t2i.txt --port 8104 \
+  "a corgi playing guitar in the rain"
+```
+
+It streams a ~16k-token thinking block, so expect minutes per prompt, and returns
+`{positive_prompt, negative_prompt, wh_ratio, parse_ok}`. Feed `positive_prompt` to
+`/v1/images/generations` and take `size` from `wh_ratio`. This host is temporary:
+`restart: "no"`, and the bonsai unit on GPU 0 is still `enable`d, so a reboot
+reclaims the card.
 
 ## Host GPU budget
 
 GPU 2 is 24 GB and shared with z-image (~1.4 GB resident). The 2K text path now
 peaks at 8.4 GB for the whole card and the 2K edit path at 20.4 GB, so 2K edits
 still leave only ~4 GB of slack. GPU 0 (llama-server `bonsai-2-27b`, ~17 GB) was
-stopped for this work and is now free; it is still `systemctl enable`d, so
-`sudo systemctl start bonsai-2-27b` brings it back and it will also return on
-reboot. GPU 1 (vLLM, ~17.9 GB) was not touched.
+stopped for this work and now hosts the prompt enhancer (`qwen-pe-t2i`, ~21 GB,
+`pe-t2i.yml`); it is still `systemctl enable`d, so `sudo systemctl start
+bonsai-2-27b` brings it back and it will also return on reboot, which would
+collide with the prompt enhancer on GPU 0. GPU 1 (vLLM, ~17.9 GB) was not
+touched.
 
 ## Measurement
 
@@ -257,3 +298,8 @@ GPU-2 VRAM sampled with `nvidia-smi`. Artifacts land in `results/<tag>/`.
 
 See `RESULTS.md` for the measured speed, VRAM and quality numbers; the raw
 artifacts are the `results/<tag>/` directories.
+
+The prompt-enhancer comparison in `RESULTS.md` was run by hand: the PE client
+prints the rewrite record, then the `positive_prompt` goes to
+`POST http://127.0.0.1:7853/v1/images/generations` at the size implied by
+`wh_ratio`, and `tesseract` reads the strings back out of the PNG.

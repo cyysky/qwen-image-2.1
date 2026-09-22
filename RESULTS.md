@@ -220,13 +220,75 @@ sudo env SGLANG_OFFLOAD_ARGS="--performance-mode memory" \
   docker compose -f qwen-image-2.1.yml up -d --force-recreate
 ```
 
+## Prompt enhancement (PE-T2I on GPU 0)
+
+The service above does **not** rewrite prompts, and that is what the text-rendering
+probes were hitting. Upstream ships the rewriter as a separate Qwen3.5-VL 9B
+checkpoint (`Qwen/Qwen-Image-2.1-PE-T2I`), served as a plain OpenAI-compatible
+vLLM endpoint. It is hosted on GPU 0 by `pe-t2i.yml` (port 8104, `vllm/vllm-openai
+v0.27.1`), temporary and `restart: "no"`.
+
+Two settings are required rather than tuning, both found by reading the engine's own
+startup failure:
+
+| Symptom | Cause | Setting |
+| --- | --- | --- |
+| `KV cache is needed ... larger than the available KV cache memory (0.8 GiB)`, max len 24288 | vLLM 0.27.1 charges ~0.55 GB of CUDA-graph memory inside `--gpu-memory-utilization`; 0.90 reports as 0.8771 without it | `--gpu-memory-utilization 0.94` |
+| `max_num_seqs (256) exceeds available Mamba cache blocks (108)` | hybrid model: 24 of 32 layers are linear attention, state lives in a fixed block pool sized by the same budget | `--max-num-seqs 8` |
+
+With those, the engine loads 17.66 GiB of weights in 8.7 s and reports 1.74 GiB
+of KV (53,084 tokens) at a 24576-token max length.
+
+### Speed
+
+The rewriter streams a ~16k-token thinking block, so it is slow by design and is
+not a per-request step you can hide. Two prompts, one client request each:
+
+| Prompt | `wh_ratio` | Rewrite wall time | `parse_ok` |
+| --- | --- | --- | --- |
+| "a corgi playing guitar in the rain" | 1:1 | ~2.5 min | true |
+| 3-string movie poster | 2:3 | ~3.5 min | true |
+
+That cost lands **once per prompt**, not per image: the rewrite is deterministic
+text that can be cached, while the render it feeds is ~100 s at 2K.
+
+### Does it fix the text?
+
+The controlled comparison is the same prompt and seed rendered twice, once with the
+raw prompt and once with the PE `positive_prompt` (4,159 chars, which spells out each
+string with its placement and typography), at 2048x2048 and at the PE-chosen 2:3
+(1696x2528).
+
+| Size | Prompt | Peak (server) | Card peak | Wall | tesseract on the tagline | on the date |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2048x2048 | raw | 21560 MB | - | 97.0 s | `every ending is a beginning` | `in theaters october 24` |
+| 2048x2048 | PE | 21638 MB | - | 99.2 s | `every ending is a beginning` | `in theaters october 24` |
+| 1696x2528 | raw | 19652 MB | 22052 MB | 100.5 s | `every ending is a beginning` | `in theaters october 24` |
+| 1696x2528 | PE | 19704 MB | 22052 MB | 102.7 s | `every ending is a beginning` | `in theaters october 24` |
+
+So the honest read is narrower than "PE fixes text": at these sizes the raw
+prompt already renders the tagline and the date, and tesseract recovers both on all
+four images. The one string that stays unreliable is the *title* - tesseract returns
+no confident `THE LAST LIGHT` on any of the four, in either configuration, and the
+poster's condensed serif title is exactly the kind of stylised type it fails on. The
+PE run is visibly better in the title band (its top band OCRs `LAST` where the raw
+run returns nothing) but that is a single-sample observation, not a measurement.
+
+What did change is the OOM that the earlier 2048x2048 text-loss came from. With
+tiling off the 2K render sits right at the card's edge: the turn-7 run peaked at
+21572 MB, logged an OOM and lost text; today the same configuration peaked at
+21560 MB and completed, so that text loss was the allocator, not the prompt. Tiling
+on is still the way to make 2K text rendering deterministic - it peaks at 5768 MB.
+
 ## Known limitations
 
-* 2048x2048 works at 5.8 GB (text) and 18.0 GB (edit) with the shipped
-  default, which adds `--vae-tiling true` to recipe C. Without tiling the decode
-  stage allocates 3.6 GB in one tensor and trips the allocator at 2K, producing a
-  text-lossy image. A and B OOM on 2K edits even with tiling, because their peak
-  comes from resident weights rather than the decode.
+* 2048x2048 runs at 5.8 GB (text) and 18.0 GB (edit) with `--vae-tiling true`.
+  The shipped default has tiling off, which puts 2K right at the card's edge: the
+  decode stage allocates 3.6 GB in one tensor, and the same prompt and seed has been
+  seen both OOM with a text-lossy image (21572 MB) and pass (21560 MB) depending
+  on what else was resident. Turn tiling on for a deterministic 2K. A and B OOM on 2K
+  edits even with tiling, because their peak comes from resident weights rather than
+  the decode.
 * 2048x2048 edits still peak at 18.0 GB (20.4 GB for the whole card including
   z-image), so the card is ~83 % full and there is ~4 GB of headroom; the text
   path peaks at only 5.8 GB. Anything else landing on GPU 2 during a 2K *edit* can
