@@ -1,0 +1,4 @@
+stem,mode,size,steps,seed,guidance_scale,wall_ms,server_infer_s,server_peak_mb,png_bytes,image_count,files,usage
+edit_1024x1024_40_r0,edit,1024x1024,40,42,0.0,23998.8,23.824747774982825,9000.0,2529333,1,['edit_1024x1024_40_r0_0.png'],
+edit_1024x1024_40_r1,edit,1024x1024,40,43,0.0,23998.5,23.830144281033427,9002.0,2086739,1,['edit_1024x1024_40_r1_0.png'],
+edit_1024x1024_40_r2,edit,1024x1024,40,44,0.0,23993.2,23.825228654081002,9002.0,2037977,1,['edit_1024x1024_40_r2_0.png'],

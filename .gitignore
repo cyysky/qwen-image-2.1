@@ -1,0 +1,15 @@
+# 31 GB Qwen-Image-2.1 checkpoint; mounted read-only into the container.
+# Re-download with the command in README.md ("Download the model").
+models/
+
+# Images written by the server itself for every request (uuid-named PNGs) and by
+# the quality probes. The measured numbers live in results/<tag>/results.{json,csv}.
+outputs/
+
+# Benchmark images. The JSON/CSV result records and the refs/ inputs stay in git;
+# the generated PNGs are large and reproducible with scripts/bench.py.
+results/**/*.png
+results/**/*.jpg
+
+__pycache__/
+*.pyc

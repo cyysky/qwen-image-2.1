@@ -1,0 +1,72 @@
+{
+  "tag": "full-offload-1k-20",
+  "vram": {
+    "vram_peak_mb": 24014,
+    "vram_idle_mb": 3400
+  },
+  "runs": [
+    {
+      "stem": "text_1024x1024_20_r0",
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 20,
+      "seed": 42,
+      "guidance_scale": 0.0,
+      "wall_ms": 12140.5,
+      "server_infer_s": 11.740516096935607,
+      "server_peak_mb": 21646.0,
+      "png_bytes": 1877229,
+      "image_count": 1,
+      "files": [
+        "text_1024x1024_20_r0_0.png"
+      ],
+      "usage": null
+    },
+    {
+      "stem": "text_1024x1024_20_r1",
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 20,
+      "seed": 43,
+      "guidance_scale": 0.0,
+      "wall_ms": 12170.7,
+      "server_infer_s": 11.787293905043043,
+      "server_peak_mb": 21646.0,
+      "png_bytes": 1727509,
+      "image_count": 1,
+      "files": [
+        "text_1024x1024_20_r1_0.png"
+      ],
+      "usage": null
+    },
+    {
+      "stem": "text_1024x1024_20_r2",
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 20,
+      "seed": 44,
+      "guidance_scale": 0.0,
+      "wall_ms": 12170.1,
+      "server_infer_s": 11.767510164994746,
+      "server_peak_mb": 21646.0,
+      "png_bytes": 1853469,
+      "image_count": 1,
+      "files": [
+        "text_1024x1024_20_r2_0.png"
+      ],
+      "usage": null
+    }
+  ],
+  "summary": [
+    {
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 20,
+      "reps": 3,
+      "wall_ms_median": 12170.1,
+      "wall_ms_min": 12140.5,
+      "server_infer_s_median": 11.768,
+      "server_peak_mb_max": 21646.0
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+# Qwen-Image-2.1 OpenAI-compatible image service.
+#
+# SGLang-Diffusion exposes the OpenAI Images API on this container:
+#   POST /v1/images/generations   (JSON, text-to-image)
+#   POST /v1/images/edits         (multipart, image editing / multi-reference)
+#   GET  /v1/models, /health, /health_generate, /get_server_info
+# The image comes back as inline base64 (b64_json) by default, see Dockerfile.
+#
+# --model-id Qwen-Image-2.1 is required: the native SGLang backend keys its
+# model detection on the checkpoint id, and this folder mounts the weights at the
+# generic path /model, which does not contain "qwen-image-2.1". Without it SGLang
+# falls back to the diffusers backend and dies on QwenImage21Pipeline.
+# Port 7853 (not 7852) because the z-image scheduler already holds 7852.
+#
+# Pinned to GPU 2 only, fully CPU-offloaded: every component (DiT, Qwen3-VL
+# text encoder, image encoder, VAE) streams its weights from host RAM per layer,
+# so the pipeline co-exists with the z-image service that shares the same card.
+# Measured on this box (see RESULTS.md): 1024x1024 / 40 steps is 23.4 s text and
+# 24.0 s edit at an 8-9 GB peak, 2048x2048 / 40 steps is 97.8 s text and
+# 135.3 s edit at a ~21.6 GB peak. This is the only measured recipe where
+# every documented endpoint works at every documented size; the faster 1K-only
+# alternative is in the override below.
+#
+# Run:
+#   cd /home/aiserver/qwen-image-2.1
+#   sudo docker compose -f qwen-image-2.1.yml up -d --build
+#
+# Override the offload recipe without editing this file (note the `sudo env`,
+# plain `sudo` drops the variable). `--performance-mode memory` is ~3 s faster
+# at 1024x1024 (20.0 s text / 23.9 s edit) but peaks ~5 GB higher and OOMs
+# on 2048x2048 edits:
+#   sudo env SGLANG_OFFLOAD_ARGS="--performance-mode memory" \
+#     docker compose -f qwen-image-2.1.yml up -d --force-recreate
+services:
+  sglang-qwen-image-21:
+    image: sglang-qwen-image-21:latest
+    build: /home/aiserver/qwen-image-2.1
+    container_name: qwen-image-2.1
+    command: >
+      zsh -c '
+      sglang serve
+      --model-path /model
+      --model-id Qwen-Image-2.1
+      --host 0.0.0.0
+      --port 7853
+      --tp-size 1
+      ${SGLANG_OFFLOAD_ARGS:---performance-mode manual --dit-layerwise-offload true --layerwise-offload-components dit text_encoder image_encoder vae}
+      --output-path /sgl-workspace/sglang/outputs
+      '
+    environment:
+      - HF_HOME=/root/.cache
+      - SGLANG_OFFLOAD_ARGS
+    volumes:
+      - /home/aiserver/.cache/huggingface:/root/.cache/huggingface
+      - /home/aiserver/jitcache:/cache/jit
+      - /home/aiserver/qwen-image-2.1/models/Qwen-Image-2.1:/model:ro
+      - /home/aiserver/cache:/root/.cache
+      - /home/aiserver/qwen-image-2.1/outputs:/sgl-workspace/sglang/outputs
+    ipc: host
+    shm_size: 8g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack: 67108864
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['2']
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    restart: "unless-stopped"

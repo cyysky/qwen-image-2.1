@@ -1,0 +1,55 @@
+{
+  "tag": "layerwise-2k-40",
+  "vram": {
+    "vram_peak_mb": 23976,
+    "vram_idle_mb": 4214
+  },
+  "runs": [
+    {
+      "stem": "text_2048x2048_40_r0",
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "seed": 42,
+      "guidance_scale": 0.0,
+      "wall_ms": 97680.8,
+      "server_infer_s": 97.11702126206364,
+      "server_peak_mb": 21628.0,
+      "png_bytes": 7842722,
+      "image_count": 1,
+      "files": [
+        "text_2048x2048_40_r0_0.png"
+      ],
+      "usage": null
+    },
+    {
+      "stem": "text_2048x2048_40_r1",
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "seed": 43,
+      "guidance_scale": 0.0,
+      "wall_ms": 97835.1,
+      "server_infer_s": 97.28681848302949,
+      "server_peak_mb": 21628.0,
+      "png_bytes": 7849886,
+      "image_count": 1,
+      "files": [
+        "text_2048x2048_40_r1_0.png"
+      ],
+      "usage": null
+    }
+  ],
+  "summary": [
+    {
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "reps": 2,
+      "wall_ms_median": 97758.0,
+      "wall_ms_min": 97680.8,
+      "server_infer_s_median": 97.202,
+      "server_peak_mb_max": 21628.0
+    }
+  ]
+}

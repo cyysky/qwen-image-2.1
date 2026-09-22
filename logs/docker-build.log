@@ -1,0 +1,316 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.38kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/lmsysorg/sglang:nightly-dev-cu13-20260921-0f6761b5
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/5] FROM docker.io/lmsysorg/sglang:nightly-dev-cu13-20260921-0f6761b5
+#4 DONE 0.2s
+
+#5 [2/5] WORKDIR /sgl-workspace/sglang
+#5 DONE 0.0s
+
+#6 [3/5] RUN test -f         /sgl-workspace/sglang/python/sglang/multimodal_gen/runtime/pipelines/qwen_image21.py
+#6 DONE 0.2s
+
+#7 [4/5] RUN pip install -e "python[diffusion]"
+#7 0.570 Obtaining file:///sgl-workspace/sglang/python
+#7 0.572   Installing build dependencies: started
+#7 75.43   Installing build dependencies: still running...
+#7 75.88   Installing build dependencies: finished with status 'done'
+#7 75.88   Checking if build backend supports build_editable: started
+#7 76.28   Checking if build backend supports build_editable: finished with status 'done'
+#7 76.28   Getting requirements to build editable: started
+#7 78.69   Getting requirements to build editable: finished with status 'done'
+#7 78.69   Preparing editable metadata (pyproject.toml): started
+#7 80.09   Preparing editable metadata (pyproject.toml): finished with status 'done'
+#7 80.11 Requirement already satisfied: aiohttp in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (3.14.3)
+#7 80.11 Requirement already satisfied: anthropic>=0.20.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.7.0)
+#7 80.11 Requirement already satisfied: apache-tvm-ffi==0.1.11 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.1.11)
+#7 80.11 Requirement already satisfied: blobfile==3.0.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (3.0.0)
+#7 80.11 Requirement already satisfied: build in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.6.1)
+#7 80.11 Requirement already satisfied: compressed-tensors==0.18.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.18.0)
+#7 80.11 Requirement already satisfied: cuda-python>=13.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (13.4.1)
+#7 80.11 Requirement already satisfied: cuda-tile==1.6.0rc5 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.6.0rc5)
+#7 80.11 Requirement already satisfied: datasets in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (5.0.1)
+#7 80.11 Requirement already satisfied: distro in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.9.0)
+#7 80.11 Requirement already satisfied: easydict in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.13)
+#7 80.11 Requirement already satisfied: einops in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.8.2)
+#7 80.11 Requirement already satisfied: fastapi in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.141.1)
+#7 80.11 Requirement already satisfied: flash-attn-4>=4.0.0b18 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (4.0.0b19)
+#7 80.11 Requirement already satisfied: flashinfer_python==0.6.18 in /opt/sglang/lib/python3.12/site-packages (from flashinfer_python[cu13]==0.6.18->sglang==0.0.0.dev1+g0f6761b54) (0.6.18)
+#7 80.11 Requirement already satisfied: gguf in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.19.0)
+#7 80.11 Requirement already satisfied: humming-kernels==0.1.12 in /opt/sglang/lib/python3.12/site-packages (from humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (0.1.12)
+#7 80.11 Requirement already satisfied: interegular in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.3.3)
+#7 80.11 Requirement already satisfied: IPython in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (9.17.1)
+#7 80.12 Requirement already satisfied: kernels<0.15,>=0.14.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.14.1)
+#7 80.12 Requirement already satisfied: llguidance<2.0.0,>=1.7.6 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.8.0)
+#7 80.12 Requirement already satisfied: mistral_common>=1.11.5 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.11.7)
+#7 80.12 Requirement already satisfied: modelscope in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.40.1)
+#7 80.12 Requirement already satisfied: msgspec in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.21.1)
+#7 80.12 Requirement already satisfied: ninja in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.13.2)
+#7 80.12 Requirement already satisfied: numba==0.65.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.65.1)
+#7 80.12 Requirement already satisfied: numpy in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.3.5)
+#7 80.12 Requirement already satisfied: nvidia-cutlass-dsl==4.6.2 in /opt/sglang/lib/python3.12/site-packages (from nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54) (4.6.2)
+#7 80.12 Requirement already satisfied: nvidia-mathdx==25.6.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (25.6.0)
+#7 80.12 Requirement already satisfied: nvidia-ml-py in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (13.610.43)
+#7 80.12 Requirement already satisfied: nvshmem4py-cu13 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.3.1)
+#7 80.12 Requirement already satisfied: openai==2.6.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.6.1)
+#7 80.12 Requirement already satisfied: openai-harmony==0.0.4 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.0.4)
+#7 80.12 Requirement already satisfied: orjson in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (3.12.0)
+#7 80.12 Requirement already satisfied: outlines==0.1.11 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.1.11)
+#7 80.12 Requirement already satisfied: packaging in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (26.3)
+#7 80.12 Requirement already satisfied: partial_json_parser in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.2.1.1.post7)
+#7 80.12 Requirement already satisfied: pillow in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (12.3.0)
+#7 80.12 Requirement already satisfied: prometheus-client>=0.20.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.26.0)
+#7 80.12 Requirement already satisfied: psutil in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (7.2.2)
+#7 80.12 Requirement already satisfied: py-spy in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.4.2)
+#7 80.12 Requirement already satisfied: pybase64 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.5.0)
+#7 80.12 Requirement already satisfied: pydantic in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.13.5)
+#7 80.13 Requirement already satisfied: python-multipart in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.0.32)
+#7 80.13 Requirement already satisfied: pyzmq>=25.1.2 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (27.2.0)
+#7 80.13 Requirement already satisfied: quack-kernels==0.6.4 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.6.4)
+#7 80.13 Requirement already satisfied: requests in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.34.2)
+#7 80.13 Requirement already satisfied: scipy in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.18.1)
+#7 80.13 Requirement already satisfied: sentencepiece in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.2.2)
+#7 80.13 Requirement already satisfied: setproctitle in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.3.7)
+#7 80.13 Requirement already satisfied: sgl-deep-ep==0.1.2 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.1.2)
+#7 80.13 Requirement already satisfied: sgl-deep-gemm==0.2.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.2.0)
+#7 80.13 Requirement already satisfied: sglang-kernel==0.4.7 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.4.7)
+#7 80.13 Requirement already satisfied: smg-grpc-servicer>=0.9.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.12.0)
+#7 80.13 Requirement already satisfied: soundfile==0.13.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.13.1)
+#7 80.13 Requirement already satisfied: tiktoken in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.14.0)
+#7 80.13 Requirement already satisfied: tilelang==0.1.12 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.1.12)
+#7 80.13 Requirement already satisfied: timm==1.0.16 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.0.16)
+#7 80.13 Requirement already satisfied: tokenizers==0.22.2 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.22.2)
+#7 80.13 Requirement already satisfied: tokenspeed_mla==0.1.8 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.1.8)
+#7 80.13 Requirement already satisfied: torch==2.13.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.13.0+cu130)
+#7 80.13 Requirement already satisfied: torch_memory_saver>=0.0.9.post1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.0.10)
+#7 80.13 Requirement already satisfied: torchaudio==2.11.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.11.0+cu130)
+#7 80.13 Requirement already satisfied: torchcodec==0.15.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.15.0+cu130)
+#7 80.13 Requirement already satisfied: torchvision in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.28.0+cu130)
+#7 80.13 Requirement already satisfied: tqdm in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (4.70.1)
+#7 80.14 Requirement already satisfied: transformers==5.12.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (5.12.1)
+#7 80.14 Requirement already satisfied: uvicorn in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.53.0)
+#7 80.14 Requirement already satisfied: uvloop in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.22.1)
+#7 80.14 Requirement already satisfied: watchfiles in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.3.0)
+#7 80.14 Requirement already satisfied: xgrammar==0.2.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.2.1)
+#7 80.14 Requirement already satisfied: xxhash in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (4.0.1)
+#7 80.14 Requirement already satisfied: zstandard in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.25.0)
+#7 80.15 Requirement already satisfied: addict==2.4.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.4.0)
+#7 80.15 Requirement already satisfied: av==16.1.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (16.1.0)
+#7 80.15 Requirement already satisfied: cache-dit==1.5.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.5.1)
+#7 80.15 Requirement already satisfied: cloudpickle==3.1.2 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (3.1.2)
+#7 80.15 Requirement already satisfied: diffusers==0.37.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.37.0)
+#7 80.15 Requirement already satisfied: imageio==2.36.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.36.0)
+#7 80.15 Requirement already satisfied: imageio-ffmpeg==0.5.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.5.1)
+#7 80.15 Requirement already satisfied: moviepy>=2.0.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.2.1)
+#7 80.15 Requirement already satisfied: msgpack in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (1.2.2)
+#7 80.15 Requirement already satisfied: nvidia-modelopt in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.46.1)
+#7 80.15 Requirement already satisfied: opencv-python-headless==4.10.0.84 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (4.10.0.84)
+#7 80.15 Requirement already satisfied: PyYAML==6.0.1 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (6.0.1)
+#7 80.15 Requirement already satisfied: remote-pdb==2.1.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (2.1.0)
+#7 80.15 Requirement already satisfied: runai_model_streamer>=0.15.7 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.16.1)
+#7 80.15 Requirement already satisfied: scikit-image==0.25.2 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.25.2)
+#7 80.15 Requirement already satisfied: st_attn==0.0.7 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.0.7)
+#7 80.15 Requirement already satisfied: trimesh>=4.0.0 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (5.1.0)
+#7 80.16 Requirement already satisfied: vsa==0.0.4 in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.0.4)
+#7 80.16 Requirement already satisfied: websockets in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (17.1)
+#7 80.16 Requirement already satisfied: xatlas in /opt/sglang/lib/python3.12/site-packages (from sglang==0.0.0.dev1+g0f6761b54) (0.0.11)
+#7 80.16 Requirement already satisfied: typing-extensions>=4.5 in /opt/sglang/lib/python3.12/site-packages (from apache-tvm-ffi==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (4.16.0)
+#7 80.16 Requirement already satisfied: pycryptodomex>=3.8 in /opt/sglang/lib/python3.12/site-packages (from blobfile==3.0.0->sglang==0.0.0.dev1+g0f6761b54) (3.23.0)
+#7 80.16 Requirement already satisfied: urllib3<3,>=1.25.3 in /opt/sglang/lib/python3.12/site-packages (from blobfile==3.0.0->sglang==0.0.0.dev1+g0f6761b54) (2.8.0)
+#7 80.16 Requirement already satisfied: lxml>=4.9 in /opt/sglang/lib/python3.12/site-packages (from blobfile==3.0.0->sglang==0.0.0.dev1+g0f6761b54) (6.1.3)
+#7 80.17 Requirement already satisfied: filelock>=3.0 in /opt/sglang/lib/python3.12/site-packages (from blobfile==3.0.0->sglang==0.0.0.dev1+g0f6761b54) (4.0.1)
+#7 80.17 Requirement already satisfied: loguru in /opt/sglang/lib/python3.12/site-packages (from compressed-tensors==0.18.0->sglang==0.0.0.dev1+g0f6761b54) (0.7.3)
+#7 80.18 Requirement already satisfied: importlib_metadata in /opt/sglang/lib/python3.12/site-packages (from diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (9.0.1)
+#7 80.18 Requirement already satisfied: httpx<1.0.0 in /opt/sglang/lib/python3.12/site-packages (from diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (0.28.1)
+#7 80.18 Requirement already satisfied: huggingface-hub<2.0,>=0.34.0 in /opt/sglang/lib/python3.12/site-packages (from diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (1.32.0)
+#7 80.18 Requirement already satisfied: regex!=2019.12.17 in /opt/sglang/lib/python3.12/site-packages (from diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (2026.9.10)
+#7 80.18 Requirement already satisfied: safetensors>=0.3.1 in /opt/sglang/lib/python3.12/site-packages (from diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (0.8.0)
+#7 80.19 Requirement already satisfied: click in /opt/sglang/lib/python3.12/site-packages (from flashinfer_python==0.6.18->flashinfer_python[cu13]==0.6.18->sglang==0.0.0.dev1+g0f6761b54) (8.5.0)
+#7 80.19 Requirement already satisfied: nccl4py>=0.3.1 in /opt/sglang/lib/python3.12/site-packages (from flashinfer_python==0.6.18->flashinfer_python[cu13]==0.6.18->sglang==0.0.0.dev1+g0f6761b54) (0.5.0)
+#7 80.19 Requirement already satisfied: nvidia-cudnn-frontend>=1.25.0 in /opt/sglang/lib/python3.12/site-packages (from flashinfer_python==0.6.18->flashinfer_python[cu13]==0.6.18->sglang==0.0.0.dev1+g0f6761b54) (1.29.0)
+#7 80.19 Requirement already satisfied: tabulate in /opt/sglang/lib/python3.12/site-packages (from flashinfer_python==0.6.18->flashinfer_python[cu13]==0.6.18->sglang==0.0.0.dev1+g0f6761b54) (0.10.0)
+#7 80.19 Requirement already satisfied: triton in /opt/sglang/lib/python3.12/site-packages (from humming-kernels==0.1.12->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (3.7.1)
+#7 80.19 Requirement already satisfied: jinja2 in /opt/sglang/lib/python3.12/site-packages (from humming-kernels==0.1.12->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (3.1.6)
+#7 80.20 Requirement already satisfied: cuda-bindings in /opt/sglang/lib/python3.12/site-packages (from humming-kernels==0.1.12->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.4.2)
+#7 80.20 Requirement already satisfied: nvidia-cuda-runtime in /opt/sglang/lib/python3.12/site-packages (from humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.0.96)
+#7 80.20 Requirement already satisfied: nvidia-cuda-cccl in /opt/sglang/lib/python3.12/site-packages (from humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.3.4.3.1)
+#7 80.20 Requirement already satisfied: nvidia-cuda-nvcc in /opt/sglang/lib/python3.12/site-packages (from humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.4.92)
+#7 80.20 Requirement already satisfied: nvidia-cuda-nvrtc in /opt/sglang/lib/python3.12/site-packages (from humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.0.88)
+#7 80.21 Requirement already satisfied: setuptools in /opt/sglang/lib/python3.12/site-packages (from imageio-ffmpeg==0.5.1->sglang==0.0.0.dev1+g0f6761b54) (84.0.0)
+#7 80.21 Requirement already satisfied: llvmlite<0.48,>=0.47.0dev0 in /opt/sglang/lib/python3.12/site-packages (from numba==0.65.1->sglang==0.0.0.dev1+g0f6761b54) (0.47.0)
+#7 80.21 Requirement already satisfied: nvidia-cutlass-dsl-libs-base==4.6.2 in /opt/sglang/lib/python3.12/site-packages (from nvidia-cutlass-dsl==4.6.2->nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54) (4.6.2)
+#7 80.21 Requirement already satisfied: nvidia-cutlass-dsl-libs-cu12==4.6.2 in /opt/sglang/lib/python3.12/site-packages (from nvidia-cutlass-dsl==4.6.2->nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54) (4.6.2)
+#7 86.56 Collecting protobuf<7,>=6.30.2 (from nvidia-cutlass-dsl-libs-base==4.6.2->nvidia-cutlass-dsl==4.6.2->nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54)
+#7 92.77   Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+#7 92.77 Requirement already satisfied: nvidia-cuda-nvdisasm<14,>=13.3 in /opt/sglang/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-base==4.6.2->nvidia-cutlass-dsl==4.6.2->nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54) (13.4.92)
+#7 92.77 Requirement already satisfied: nvidia-cutlass-dsl-libs-core==4.6.2 in /opt/sglang/lib/python3.12/site-packages (from nvidia-cutlass-dsl-libs-base==4.6.2->nvidia-cutlass-dsl==4.6.2->nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54) (4.6.2)
+#7 92.78 Requirement already satisfied: nvidia-cutlass-dsl-libs-cu13==4.6.2 in /opt/sglang/lib/python3.12/site-packages (from nvidia-cutlass-dsl[cu13]==4.6.2->sglang==0.0.0.dev1+g0f6761b54) (4.6.2)
+#7 92.79 Requirement already satisfied: anyio<5,>=3.5.0 in /opt/sglang/lib/python3.12/site-packages (from openai==2.6.1->sglang==0.0.0.dev1+g0f6761b54) (4.15.1)
+#7 92.79 Requirement already satisfied: jiter<1,>=0.10.0 in /opt/sglang/lib/python3.12/site-packages (from openai==2.6.1->sglang==0.0.0.dev1+g0f6761b54) (0.17.0)
+#7 92.79 Requirement already satisfied: sniffio in /opt/sglang/lib/python3.12/site-packages (from openai==2.6.1->sglang==0.0.0.dev1+g0f6761b54) (1.3.1)
+#7 92.80 Requirement already satisfied: lark in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (1.3.1)
+#7 92.80 Requirement already satisfied: nest_asyncio in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (1.6.0)
+#7 92.80 Requirement already satisfied: diskcache in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (5.6.3)
+#7 92.80 Requirement already satisfied: referencing in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (0.37.0)
+#7 92.80 Requirement already satisfied: jsonschema in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (4.26.0)
+#7 92.80 Requirement already satisfied: pycountry in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (26.2.16)
+#7 92.80 Requirement already satisfied: airportsdata in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (20260905)
+#7 92.80 Requirement already satisfied: outlines_core==0.1.26 in /opt/sglang/lib/python3.12/site-packages (from outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (0.1.26)
+#7 92.81 Requirement already satisfied: torch-c-dlpack-ext in /opt/sglang/lib/python3.12/site-packages (from quack-kernels==0.6.4->sglang==0.0.0.dev1+g0f6761b54) (0.1.5)
+#7 92.82 Requirement already satisfied: networkx>=3.0 in /opt/sglang/lib/python3.12/site-packages (from scikit-image==0.25.2->sglang==0.0.0.dev1+g0f6761b54) (3.6.1)
+#7 92.82 Requirement already satisfied: tifffile>=2022.8.12 in /opt/sglang/lib/python3.12/site-packages (from scikit-image==0.25.2->sglang==0.0.0.dev1+g0f6761b54) (2026.9.20)
+#7 92.82 Requirement already satisfied: lazy-loader>=0.4 in /opt/sglang/lib/python3.12/site-packages (from scikit-image==0.25.2->sglang==0.0.0.dev1+g0f6761b54) (0.5)
+#7 92.83 Requirement already satisfied: cffi>=1.0 in /opt/sglang/lib/python3.12/site-packages (from soundfile==0.13.1->sglang==0.0.0.dev1+g0f6761b54) (2.1.1)
+#7 92.84 Requirement already satisfied: ml-dtypes in /opt/sglang/lib/python3.12/site-packages (from tilelang==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (0.6.0)
+#7 92.84 Requirement already satisfied: z3-solver<4.15.5,>=4.13.0 in /opt/sglang/lib/python3.12/site-packages (from tilelang==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (4.15.4.0)
+#7 92.85 Requirement already satisfied: tokenspeed-triton>=3.7.10.post20260531 in /opt/sglang/lib/python3.12/site-packages (from tokenspeed_mla==0.1.8->sglang==0.0.0.dev1+g0f6761b54) (3.8.10.post20260920)
+#7 92.85 Requirement already satisfied: sympy>=1.13.3 in /opt/sglang/lib/python3.12/site-packages (from torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (1.14.0)
+#7 92.85 Requirement already satisfied: fsspec>=0.8.5 in /opt/sglang/lib/python3.12/site-packages (from torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (2026.6.0)
+#7 92.86 Requirement already satisfied: cuda-toolkit==13.0.3 in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (13.0.3.0)
+#7 92.86 Requirement already satisfied: nvidia-cudnn-cu13==9.20.0.48 in /opt/sglang/lib/python3.12/site-packages (from torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (9.20.0.48)
+#7 92.86 Requirement already satisfied: nvidia-cusparselt-cu13==0.8.1 in /opt/sglang/lib/python3.12/site-packages (from torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (0.8.1)
+#7 92.86 Collecting nvidia-nccl-cu13==2.29.7 (from torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54)
+#7 92.86   Using cached nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl.metadata (2.1 kB)
+#7 92.87 Requirement already satisfied: nvidia-nvshmem-cu13==3.4.5 in /opt/sglang/lib/python3.12/site-packages (from torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (3.4.5)
+#7 92.89 Requirement already satisfied: nvidia-cublas==13.1.1.3.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (13.1.1.3)
+#7 92.89 Requirement already satisfied: nvidia-cufft==12.0.0.61.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (12.0.0.61)
+#7 92.89 Requirement already satisfied: nvidia-nvjitlink<14,>=13.0.88 in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (13.4.92)
+#7 92.89 Requirement already satisfied: nvidia-cufile==1.15.1.6.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (1.15.1.6)
+#7 92.89 Requirement already satisfied: nvidia-cuda-cupti==13.0.85.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (13.0.85)
+#7 92.89 Requirement already satisfied: nvidia-curand==10.4.0.35.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (10.4.0.35)
+#7 92.90 Requirement already satisfied: nvidia-cusolver==12.0.4.66.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (12.0.4.66)
+#7 92.90 Requirement already satisfied: nvidia-cusparse==12.6.3.3.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (12.6.3.3)
+#7 92.90 Requirement already satisfied: nvidia-nvtx==13.0.85.* in /opt/sglang/lib/python3.12/site-packages (from cuda-toolkit[cublas,cudart,cufft,cufile,cupti,curand,cusolver,cusparse,nvjitlink,nvrtc,nvtx]==13.0.3; platform_system == "Linux"->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (13.0.85)
+#7 92.92 Requirement already satisfied: typer in /opt/sglang/lib/python3.12/site-packages (from transformers==5.12.1->sglang==0.0.0.dev1+g0f6761b54) (0.27.2)
+#7 92.95 Requirement already satisfied: idna>=2.8 in /opt/sglang/lib/python3.12/site-packages (from anyio<5,>=3.5.0->openai==2.6.1->sglang==0.0.0.dev1+g0f6761b54) (3.20)
+#7 92.95 Requirement already satisfied: cuda-pathfinder>=1.4.2 in /opt/sglang/lib/python3.12/site-packages (from cuda-bindings->humming-kernels==0.1.12->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (1.8.2)
+#7 92.96 Requirement already satisfied: certifi in /opt/sglang/lib/python3.12/site-packages (from httpx<1.0.0->diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (2026.7.22)
+#7 92.96 Requirement already satisfied: httpcore==1.* in /opt/sglang/lib/python3.12/site-packages (from httpx<1.0.0->diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (1.0.9)
+#7 92.96 Requirement already satisfied: h11>=0.16 in /opt/sglang/lib/python3.12/site-packages (from httpcore==1.*->httpx<1.0.0->diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (0.16.0)
+#7 92.97 Requirement already satisfied: hf-xet<2.0.0,>=1.5.2 in /opt/sglang/lib/python3.12/site-packages (from huggingface-hub<2.0,>=0.34.0->diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (1.6.0)
+#7 92.98 Requirement already satisfied: kernels-data>=0.14.0.dev1 in /opt/sglang/lib/python3.12/site-packages (from kernels<0.15,>=0.14.1->sglang==0.0.0.dev1+g0f6761b54) (0.16.2)
+#7 92.98 Requirement already satisfied: tomlkit>=0.13.3 in /opt/sglang/lib/python3.12/site-packages (from kernels<0.15,>=0.14.1->sglang==0.0.0.dev1+g0f6761b54) (0.15.1)
+#7 93.03 Requirement already satisfied: annotated-types>=0.6.0 in /opt/sglang/lib/python3.12/site-packages (from pydantic->sglang==0.0.0.dev1+g0f6761b54) (0.8.0)
+#7 93.03 Requirement already satisfied: pydantic-core==2.46.5 in /opt/sglang/lib/python3.12/site-packages (from pydantic->sglang==0.0.0.dev1+g0f6761b54) (2.46.5)
+#7 93.03 Requirement already satisfied: typing-inspection>=0.4.2 in /opt/sglang/lib/python3.12/site-packages (from pydantic->sglang==0.0.0.dev1+g0f6761b54) (0.4.4)
+#7 93.05 Requirement already satisfied: docstring-parser<1,>=0.15 in /opt/sglang/lib/python3.12/site-packages (from anthropic>=0.20.0->sglang==0.0.0.dev1+g0f6761b54) (0.18.0)
+#7 93.05 Requirement already satisfied: httpx2<3,>=2.0.0 in /opt/sglang/lib/python3.12/site-packages (from anthropic>=0.20.0->sglang==0.0.0.dev1+g0f6761b54) (2.13.0)
+#7 93.06 Requirement already satisfied: httpcore2==2.13.0 in /opt/sglang/lib/python3.12/site-packages (from httpx2<3,>=2.0.0->anthropic>=0.20.0->sglang==0.0.0.dev1+g0f6761b54) (2.13.0)
+#7 93.06 Requirement already satisfied: truststore>=0.10 in /opt/sglang/lib/python3.12/site-packages (from httpx2<3,>=2.0.0->anthropic>=0.20.0->sglang==0.0.0.dev1+g0f6761b54) (0.10.4)
+#7 93.08 Requirement already satisfied: pycparser in /opt/sglang/lib/python3.12/site-packages (from cffi>=1.0->soundfile==0.13.1->sglang==0.0.0.dev1+g0f6761b54) (3.0)
+#7 93.08 Requirement already satisfied: cuda-core~=1.2.0 in /opt/sglang/lib/python3.12/site-packages (from cuda-python>=13.0->sglang==0.0.0.dev1+g0f6761b54) (1.2.0)
+#7 93.12 Requirement already satisfied: pydantic-extra-types>=2.10.5 in /opt/sglang/lib/python3.12/site-packages (from pydantic-extra-types[pycountry]>=2.10.5->mistral_common>=1.11.5->sglang==0.0.0.dev1+g0f6761b54) (2.11.1)
+#7 93.13 Requirement already satisfied: attrs>=22.2.0 in /opt/sglang/lib/python3.12/site-packages (from jsonschema->outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (26.1.0)
+#7 93.13 Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /opt/sglang/lib/python3.12/site-packages (from jsonschema->outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (2025.9.1)
+#7 93.13 Requirement already satisfied: rpds-py>=0.25.0 in /opt/sglang/lib/python3.12/site-packages (from jsonschema->outlines==0.1.11->sglang==0.0.0.dev1+g0f6761b54) (2026.6.3)
+#7 93.14 Requirement already satisfied: decorator<6.0,>=4.0.2 in /opt/sglang/lib/python3.12/site-packages (from moviepy>=2.0.0->sglang==0.0.0.dev1+g0f6761b54) (5.3.1)
+#7 93.14 Requirement already satisfied: proglog<=1.0.0 in /opt/sglang/lib/python3.12/site-packages (from moviepy>=2.0.0->sglang==0.0.0.dev1+g0f6761b54) (0.1.12)
+#7 93.14 Requirement already satisfied: python-dotenv>=0.10 in /opt/sglang/lib/python3.12/site-packages (from moviepy>=2.0.0->sglang==0.0.0.dev1+g0f6761b54) (1.2.3)
+#7 93.32 Collecting pillow (from sglang==0.0.0.dev1+g0f6761b54)
+#7 93.34   Downloading pillow-11.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.0 kB)
+#7 93.42 Requirement already satisfied: charset_normalizer<4,>=2 in /opt/sglang/lib/python3.12/site-packages (from requests->sglang==0.0.0.dev1+g0f6761b54) (3.5.1)
+#7 93.44 Requirement already satisfied: humanize in /opt/sglang/lib/python3.12/site-packages (from runai_model_streamer>=0.15.7->sglang==0.0.0.dev1+g0f6761b54) (4.16.0)
+#7 93.49 Requirement already satisfied: smg-grpc-proto>=0.4.20 in /opt/sglang/lib/python3.12/site-packages (from smg-grpc-servicer>=0.9.0->sglang==0.0.0.dev1+g0f6761b54) (0.4.20)
+#7 93.49 Requirement already satisfied: grpcio>=1.81.1 in /opt/sglang/lib/python3.12/site-packages (from smg-grpc-servicer>=0.9.0->sglang==0.0.0.dev1+g0f6761b54) (1.84.0)
+#7 93.49 Requirement already satisfied: grpcio-reflection>=1.81.1 in /opt/sglang/lib/python3.12/site-packages (from smg-grpc-servicer>=0.9.0->sglang==0.0.0.dev1+g0f6761b54) (1.81.1)
+#7 93.49 Requirement already satisfied: grpcio-health-checking>=1.81.1 in /opt/sglang/lib/python3.12/site-packages (from smg-grpc-servicer>=0.9.0->sglang==0.0.0.dev1+g0f6761b54) (1.81.1)
+#7 93.51 Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/sglang/lib/python3.12/site-packages (from sympy>=1.13.3->torch==2.13.0->sglang==0.0.0.dev1+g0f6761b54) (1.3.0)
+#7 93.56 Requirement already satisfied: aiohappyeyeballs>=2.5.0 in /opt/sglang/lib/python3.12/site-packages (from aiohttp->sglang==0.0.0.dev1+g0f6761b54) (2.7.1)
+#7 93.56 Requirement already satisfied: aiosignal>=1.4.0 in /opt/sglang/lib/python3.12/site-packages (from aiohttp->sglang==0.0.0.dev1+g0f6761b54) (1.4.0)
+#7 93.56 Requirement already satisfied: frozenlist>=1.1.1 in /opt/sglang/lib/python3.12/site-packages (from aiohttp->sglang==0.0.0.dev1+g0f6761b54) (1.8.0)
+#7 93.56 Requirement already satisfied: multidict<7.0,>=4.5 in /opt/sglang/lib/python3.12/site-packages (from aiohttp->sglang==0.0.0.dev1+g0f6761b54) (6.9.0)
+#7 93.56 Requirement already satisfied: propcache>=0.2.0 in /opt/sglang/lib/python3.12/site-packages (from aiohttp->sglang==0.0.0.dev1+g0f6761b54) (0.5.4)
+#7 93.57 Requirement already satisfied: yarl<2.0,>=1.17.0 in /opt/sglang/lib/python3.12/site-packages (from aiohttp->sglang==0.0.0.dev1+g0f6761b54) (1.25.1)
+#7 93.60 Requirement already satisfied: pyproject_hooks in /opt/sglang/lib/python3.12/site-packages (from build->sglang==0.0.0.dev1+g0f6761b54) (1.3.3)
+#7 93.61 Requirement already satisfied: pyarrow>=21.0.0 in /opt/sglang/lib/python3.12/site-packages (from datasets->sglang==0.0.0.dev1+g0f6761b54) (25.0.1)
+#7 93.61 Requirement already satisfied: dill<0.4.2,>=0.3.0 in /opt/sglang/lib/python3.12/site-packages (from datasets->sglang==0.0.0.dev1+g0f6761b54) (0.4.1)
+#7 93.61 Requirement already satisfied: pandas in /opt/sglang/lib/python3.12/site-packages (from datasets->sglang==0.0.0.dev1+g0f6761b54) (3.0.6)
+#7 93.61 Requirement already satisfied: multiprocess<0.70.20 in /opt/sglang/lib/python3.12/site-packages (from datasets->sglang==0.0.0.dev1+g0f6761b54) (0.70.19)
+#7 93.65 Requirement already satisfied: starlette>=0.46.0 in /opt/sglang/lib/python3.12/site-packages (from fastapi->sglang==0.0.0.dev1+g0f6761b54) (1.6.0)
+#7 93.65 Requirement already satisfied: annotated-doc>=0.0.2 in /opt/sglang/lib/python3.12/site-packages (from fastapi->sglang==0.0.0.dev1+g0f6761b54) (0.0.5)
+#7 93.68 Requirement already satisfied: zipp>=3.20 in /opt/sglang/lib/python3.12/site-packages (from importlib_metadata->diffusers==0.37.0->sglang==0.0.0.dev1+g0f6761b54) (4.1.0)
+#7 93.69 Requirement already satisfied: ipython-pygments-lexers>=1.0.0 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (1.1.1)
+#7 93.69 Requirement already satisfied: jedi>=0.18.2 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (0.20.0)
+#7 93.69 Requirement already satisfied: matplotlib-inline>=0.1.6 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (0.2.2)
+#7 93.69 Requirement already satisfied: pexpect>4.6 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (4.9.0)
+#7 93.69 Requirement already satisfied: prompt_toolkit<3.1.0,>=3.0.41 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (3.0.53)
+#7 93.70 Requirement already satisfied: pygments>=2.14.0 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (2.21.0)
+#7 93.70 Requirement already satisfied: stack_data>=0.6.0 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (0.6.3)
+#7 93.70 Requirement already satisfied: traitlets>=5.13.0 in /opt/sglang/lib/python3.12/site-packages (from IPython->sglang==0.0.0.dev1+g0f6761b54) (5.16.1)
+#7 93.70 Requirement already satisfied: wcwidth>=0.1.4 in /opt/sglang/lib/python3.12/site-packages (from prompt_toolkit<3.1.0,>=3.0.41->IPython->sglang==0.0.0.dev1+g0f6761b54) (0.8.4)
+#7 93.71 Requirement already satisfied: parso<0.9.0,>=0.8.6 in /opt/sglang/lib/python3.12/site-packages (from jedi>=0.18.2->IPython->sglang==0.0.0.dev1+g0f6761b54) (0.8.7)
+#7 93.73 Requirement already satisfied: ptyprocess>=0.5 in /opt/sglang/lib/python3.12/site-packages (from pexpect>4.6->IPython->sglang==0.0.0.dev1+g0f6761b54) (0.7.0)
+#7 93.75 Requirement already satisfied: executing>=1.2.0 in /opt/sglang/lib/python3.12/site-packages (from stack_data>=0.6.0->IPython->sglang==0.0.0.dev1+g0f6761b54) (2.2.1)
+#7 93.75 Requirement already satisfied: asttokens>=2.1.0 in /opt/sglang/lib/python3.12/site-packages (from stack_data>=0.6.0->IPython->sglang==0.0.0.dev1+g0f6761b54) (3.0.2)
+#7 93.75 Requirement already satisfied: pure-eval in /opt/sglang/lib/python3.12/site-packages (from stack_data>=0.6.0->IPython->sglang==0.0.0.dev1+g0f6761b54) (0.2.4)
+#7 93.77 Requirement already satisfied: MarkupSafe>=2.0 in /opt/sglang/lib/python3.12/site-packages (from jinja2->humming-kernels==0.1.12->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (3.0.3)
+#7 93.80 Requirement already satisfied: modelscope-hub>=0.4.2 in /opt/sglang/lib/python3.12/site-packages (from modelscope->sglang==0.0.0.dev1+g0f6761b54) (0.4.5)
+#7 93.84 Requirement already satisfied: cryptography>=41 in /opt/sglang/lib/python3.12/site-packages (from modelscope-hub>=0.4.2->modelscope->sglang==0.0.0.dev1+g0f6761b54) (50.0.1)
+#7 93.87 Requirement already satisfied: nvidia-nvvm in /opt/sglang/lib/python3.12/site-packages (from nvidia-cuda-nvcc->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.4.92)
+#7 93.87 Requirement already satisfied: nvidia-cuda-crt in /opt/sglang/lib/python3.12/site-packages (from nvidia-cuda-nvcc->humming-kernels[cu13]==0.1.12->sglang==0.0.0.dev1+g0f6761b54) (13.4.92)
+#7 93.88 Requirement already satisfied: omegaconf>=2.3.0 in /opt/sglang/lib/python3.12/site-packages (from nvidia-modelopt->sglang==0.0.0.dev1+g0f6761b54) (2.3.1)
+#7 93.88 Requirement already satisfied: pulp<4.0 in /opt/sglang/lib/python3.12/site-packages (from nvidia-modelopt->sglang==0.0.0.dev1+g0f6761b54) (3.3.2)
+#7 93.88 Requirement already satisfied: rich in /opt/sglang/lib/python3.12/site-packages (from nvidia-modelopt->sglang==0.0.0.dev1+g0f6761b54) (15.0.0)
+#7 93.90 Requirement already satisfied: antlr4-python3-runtime==4.9.* in /opt/sglang/lib/python3.12/site-packages (from omegaconf>=2.3.0->nvidia-modelopt->sglang==0.0.0.dev1+g0f6761b54) (4.9.3)
+#7 93.92 Requirement already satisfied: Cython>=0.29.24 in /opt/sglang/lib/python3.12/site-packages (from nvshmem4py-cu13->sglang==0.0.0.dev1+g0f6761b54) (3.3.0)
+#7 93.94 Requirement already satisfied: python-dateutil>=2.8.2 in /opt/sglang/lib/python3.12/site-packages (from pandas->datasets->sglang==0.0.0.dev1+g0f6761b54) (2.9.0.post0)
+#7 93.95 Requirement already satisfied: six>=1.5 in /opt/sglang/lib/python3.12/site-packages (from python-dateutil>=2.8.2->pandas->datasets->sglang==0.0.0.dev1+g0f6761b54) (1.17.0)
+#7 93.99 Requirement already satisfied: markdown-it-py>=2.2.0 in /opt/sglang/lib/python3.12/site-packages (from rich->nvidia-modelopt->sglang==0.0.0.dev1+g0f6761b54) (4.2.0)
+#7 93.99 Requirement already satisfied: mdurl~=0.1 in /opt/sglang/lib/python3.12/site-packages (from markdown-it-py>=2.2.0->rich->nvidia-modelopt->sglang==0.0.0.dev1+g0f6761b54) (0.1.2)
+#7 94.03 Requirement already satisfied: shellingham>=1.3.0 in /opt/sglang/lib/python3.12/site-packages (from typer->transformers==5.12.1->sglang==0.0.0.dev1+g0f6761b54) (1.5.4)
+#7 94.09 Using cached nvidia_nccl_cu13-2.29.7-py3-none-manylinux_2_18_x86_64.whl (206.0 MB)
+#7 94.24 Downloading protobuf-6.33.6-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+#7 94.29 Downloading pillow-11.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.6 MB)
+#7 94.39    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.6/6.6 MB 65.7 MB/s  0:00:00
+#7 94.60 Building wheels for collected packages: sglang
+#7 94.60   Building editable for sglang (pyproject.toml): started
+#7 173.2   Building editable for sglang (pyproject.toml): still running...
+#7 335.2   Building editable for sglang (pyproject.toml): still running...
+#7 336.9   Building editable for sglang (pyproject.toml): finished with status 'done'
+#7 336.9   Created wheel for sglang: filename=sglang-0.0.0.dev1+g0f6761b54-0.editable-cp312-cp312-linux_x86_64.whl size=7523 sha256=c0cad6f8ed580aa6beddb1ae26902aa6df9aa72b5ce822f54d24ae190201f3d8
+#7 336.9   Stored in directory: /tmp/pip-ephem-wheel-cache-yn5z92pa/wheels/95/16/f3/b25c8630b16b109a05bf1c087b7893176eec379916f317a1fd
+#7 336.9 Successfully built sglang
+#7 337.1 Installing collected packages: protobuf, pillow, nvidia-nccl-cu13, sglang
+#7 337.1   Attempting uninstall: protobuf
+#7 337.1     Found existing installation: protobuf 7.36.2
+#7 337.1     Uninstalling protobuf-7.36.2:
+#7 337.1       Successfully uninstalled protobuf-7.36.2
+#7 337.3   Attempting uninstall: pillow
+#7 337.3     Found existing installation: pillow 12.3.0
+#7 337.3     Uninstalling pillow-12.3.0:
+#7 337.3       Successfully uninstalled pillow-12.3.0
+#7 337.6   Attempting uninstall: nvidia-nccl-cu13
+#7 337.6     Found existing installation: nvidia-nccl-cu13 2.30.7
+#7 337.6     Uninstalling nvidia-nccl-cu13-2.30.7:
+#7 337.7       Successfully uninstalled nvidia-nccl-cu13-2.30.7
+#7 338.5   Attempting uninstall: sglang
+#7 338.5     Found existing installation: sglang 0.0.0.dev1+g0f6761b54
+#7 338.5     Uninstalling sglang-0.0.0.dev1+g0f6761b54:
+#7 339.1       Successfully uninstalled sglang-0.0.0.dev1+g0f6761b54
+#7 339.1 
+#7 339.1 ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+#7 339.1 cosmos-guardrail 0.3.1 requires opencv-python>=4.10.0.84, which is not installed.
+#7 339.1 grpcio-tools 1.84.0 requires protobuf<8.0.0,>=7.35.1, but you have protobuf 6.33.6 which is incompatible.
+#7 339.1 cosmos-guardrail 0.3.1 requires imageio>=2.37.0, but you have imageio 2.36.0 which is incompatible.
+#7 339.1 Successfully installed nvidia-nccl-cu13-2.29.7 pillow-11.3.0 protobuf-6.33.6 sglang-0.0.0.dev1+g0f6761b54
+#7 DONE 340.6s
+
+#8 [5/5] RUN grep -q 'response_format: Optional\[str\] = "url"'         /sgl-workspace/sglang/python/sglang/multimodal_gen/runtime/entrypoints/openai/protocol.py     && sed -i 's/response_format: Optional\[str\] = "url"/response_format: Optional[str] = "b64_json"/'         /sgl-workspace/sglang/python/sglang/multimodal_gen/runtime/entrypoints/openai/protocol.py     && grep -q 'response_format: Optional\[str\] = "b64_json"'         /sgl-workspace/sglang/python/sglang/multimodal_gen/runtime/entrypoints/openai/protocol.py
+#8 DONE 0.2s
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers 8.1s done
+#9 writing image sha256:8ef14dddb3b5148d59f21a2a8f43db98a8806c40156ba009954cd630998c5dbf done
+#9 naming to docker.io/library/sglang-qwen-image-21:latest done
+#9 DONE 8.1s
