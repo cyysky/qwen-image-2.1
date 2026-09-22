@@ -1,77 +1,0 @@
-Reading package lists...
-Building dependency tree...
-Reading state information...
-The following packages were automatically installed and are no longer required:
-  gyp libbsd0:i386 libc-ares2 libdrm2:i386 libexpat1:i386 libffi8:i386
-  libfwupd2 libfwupdplugin5 libgbm1:i386 libgcab-1.0-0 libjs-events
-  libjs-highlight.js libjs-inherits libjs-is-typedarray libjs-psl
-  libjs-source-map libjs-sprintf-js libjs-typedarray-to-buffer libmd0:i386
-  libnode-dev libnode72 libnvidia-egl-wayland1:i386 libsmbios-c2 libssl-dev
-  libuv1-dev libwayland-client0:i386 libwayland-server0:i386 libx11-6:i386
-  libx11-xcb1:i386 libxau6:i386 libxcb-dri3-0:i386 libxcb-present0:i386
-  libxcb-randr0:i386 libxcb1:i386 libxdmcp6:i386 libxext6:i386 node-abbrev
-  node-ansi-regex node-ansi-styles node-ansistyles node-are-we-there-yet
-  node-arrify node-asap node-asynckit node-balanced-match node-brace-expansion
-  node-chownr node-clean-yaml-object node-color-convert node-color-name
-  node-commander node-core-util-is node-decompress-response
-  node-delayed-stream node-delegates node-depd node-diff node-encoding
-  node-end-of-stream node-err-code node-escape-string-regexp node-fancy-log
-  node-foreground-child node-fs.realpath node-function-bind node-get-stream
-  node-glob node-growl node-has-flag node-has-unicode node-hosted-git-info
-  node-iconv-lite node-iferr node-imurmurhash node-indent-string node-inflight
-  node-inherits node-ini node-ip node-ip-regex node-is-buffer
-  node-is-plain-obj node-is-typedarray node-isarray node-isexe
-  node-json-parse-better-errors node-jsonparse node-kind-of
-  node-lodash-packages node-lowercase-keys node-lru-cache node-mimic-response
-  node-minimatch node-minimist node-minipass node-mute-stream node-negotiator
-  node-npm-bundled node-once node-osenv node-p-cancelable node-p-map
-  node-path-is-absolute node-process-nextick-args node-promise-inflight
-  node-promise-retry node-promzard node-pump node-quick-lru node-read
-  node-readable-stream node-resolve node-retry node-safe-buffer
-  node-set-blocking node-signal-exit node-slash node-slice-ansi
-  node-source-map node-spdx-correct node-spdx-exceptions
-  node-spdx-expression-parse node-spdx-license-ids node-sprintf-js
-  node-stealthy-require node-string-decoder node-supports-color
-  node-text-table node-time-stamp node-tmatch node-typedarray-to-buffer
-  node-universalify node-util-deprecate node-validate-npm-package-license
-  node-webidl-conversions node-whatwg-fetch node-wrappy node-yallist
-  nodejs-doc nvidia-firmware-580-server-580.126.09
-  nvidia-firmware-580-server-580.65.06
-Use 'sudo apt autoremove' to remove them.
-The following additional packages will be installed:
-  liblept5 libtesseract4 tesseract-ocr-eng tesseract-ocr-osd
-The following NEW packages will be installed:
-  liblept5 libtesseract4 tesseract-ocr tesseract-ocr-eng tesseract-ocr-osd
-0 upgraded, 5 newly installed, 0 to remove and 38 not upgraded.
-Need to get 7231 kB of archives.
-After this operation, 21.7 MB of additional disk space will be used.
-Get:1 http://my.archive.ubuntu.com/ubuntu jammy/universe amd64 liblept5 amd64 1.82.0-3build1 [1107 kB]
-Get:2 http://my.archive.ubuntu.com/ubuntu jammy/universe amd64 libtesseract4 amd64 4.1.1-2.1build1 [1308 kB]
-Get:3 http://my.archive.ubuntu.com/ubuntu jammy/universe amd64 tesseract-ocr-eng all 1:4.00~git30-7274cfa-1.1 [1591 kB]
-Get:4 http://my.archive.ubuntu.com/ubuntu jammy/universe amd64 tesseract-ocr-osd all 1:4.00~git30-7274cfa-1.1 [2990 kB]
-Get:5 http://my.archive.ubuntu.com/ubuntu jammy/universe amd64 tesseract-ocr amd64 4.1.1-2.1build1 [236 kB]
-dpkg-preconfigure: unable to re-open stdin: No such file or directory
-Fetched 7231 kB in 6s (1185 kB/s)
-Selecting previously unselected package liblept5:amd64.
-(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 222360 files and directories currently installed.)
-Preparing to unpack .../liblept5_1.82.0-3build1_amd64.deb ...
-Unpacking liblept5:amd64 (1.82.0-3build1) ...
-Selecting previously unselected package libtesseract4:amd64.
-Preparing to unpack .../libtesseract4_4.1.1-2.1build1_amd64.deb ...
-Unpacking libtesseract4:amd64 (4.1.1-2.1build1) ...
-Selecting previously unselected package tesseract-ocr-eng.
-Preparing to unpack .../tesseract-ocr-eng_1%3a4.00~git30-7274cfa-1.1_all.deb ...
-Unpacking tesseract-ocr-eng (1:4.00~git30-7274cfa-1.1) ...
-Selecting previously unselected package tesseract-ocr-osd.
-Preparing to unpack .../tesseract-ocr-osd_1%3a4.00~git30-7274cfa-1.1_all.deb ...
-Unpacking tesseract-ocr-osd (1:4.00~git30-7274cfa-1.1) ...
-Selecting previously unselected package tesseract-ocr.
-Preparing to unpack .../tesseract-ocr_4.1.1-2.1build1_amd64.deb ...
-Unpacking tesseract-ocr (4.1.1-2.1build1) ...
-Setting up tesseract-ocr-eng (1:4.00~git30-7274cfa-1.1) ...
-Setting up liblept5:amd64 (1.82.0-3build1) ...
-Setting up libtesseract4:amd64 (4.1.1-2.1build1) ...
-Setting up tesseract-ocr-osd (1:4.00~git30-7274cfa-1.1) ...
-Setting up tesseract-ocr (4.1.1-2.1build1) ...
-Processing triggers for man-db (2.10.2-1) ...
-Processing triggers for libc-bin (2.35-0ubuntu3.15) ...

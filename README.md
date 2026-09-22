@@ -522,6 +522,18 @@ python app.py --check-enhancer   # also send one tiny enhancer request
 `tools/smoke_test.py` boots a mock upstream, so the whole UI can be exercised
 with no GPU. See `playground/README.md` for the full `.env` reference.
 
+On this box the playground runs from `playground/.env` bound to
+`0.0.0.0:7860`; start it detached so it survives the shell:
+
+```bash
+cd playground && setsid nohup python3 app.py > /tmp/playground.log 2>&1 < /dev/null &
+```
+
+Its default image endpoint is the local service (`http://10.0.151.2:7853/v1`), and
+the `pe-t2i` enhancer points at the local checkpoint on 8104. The `pe-i2i` engine
+(8105) is only usable while `pe-i2i.yml` is hosted, so with `qwen-pe-t2i` on GPU 0
+that engine reports as down - the other two work.
+
 ## Measurement
 
 ```bash

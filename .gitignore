@@ -14,6 +14,7 @@ results/**/*.jpg
 __pycache__/
 *.pyc
 
-# Transient: progress log for the optional prompt-rewriter (PE) checkpoint
-# download. The download command itself is in README.md.
-logs/pe-download.log
+# Transient build/download/bench logs (docker build, checkpoint downloads, PE
+# download progress, offload experiments). The commands that produce them are in
+# README.md; nothing here needs version control.
+logs/
