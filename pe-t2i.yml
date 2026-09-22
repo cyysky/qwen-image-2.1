@@ -1,0 +1,96 @@
+# Temporary host for the Qwen-Image-2.1 prompt enhancer (PE-T2I) on GPU 0.
+#
+# Upstream ships the prompt rewriter as a *separate* model, not as part of the
+# SGLang image service: `prompt_rewrite/` holds two fine-tuned Qwen3.5-VL 9B
+# checkpoints (~19 GB bf16 each) that are served as an OpenAI-compatible vLLM
+# endpoint, and the *client* supplies the task system prompt. The image service on
+# GPU 2 (qwen-image-2.1.yml) does not rewrite prompts at all, which is why
+# multi-string text layouts lose their text.
+#
+# This is the T2I checkpoint only. The edit rewriter is Qwen-Image-2.1-PE-I2I and is
+# a separate checkpoint with a separate system prompt; point --model at that dir and
+# pass prompt_rewrite/prompts/system_prompt_edit.txt to use it instead.
+#
+# GPU 0 is used because it is free: the llama-server (bonsai-2-27b) that used to
+# hold ~17 GB there was stopped for the Qwen-Image-2.1 work. GPU 2 keeps the image
+# service. This unit is deliberately `restart: "no"` because it is a temporary host,
+# not a permanent service.
+#
+# Checkpoint: models/Qwen-Image-2.1-PE-T2I, downloaded with
+#   hf download Qwen/Qwen-Image-2.1-PE-T2I --local-dir models/Qwen-Image-2.1-PE-T2I
+#
+# Run:
+#   cd /home/aiserver/qwen-image-2.1
+#   sudo docker compose -f pe-t2i.yml up -d
+#   curl -sf http://127.0.0.1:8104/health && echo ok
+#
+# Then, from the upstream prompt_rewrite/ client (the server holds the weights
+# but not the task prompt, so the client must send it):
+#   python client.py --task t2i --model Qwen/Qwen-Image-2.1-PE-T2I \
+#     --system-prompt prompts/system_prompt_t2i.txt --port 8104 \
+#     "a corgi playing guitar in the rain"
+#
+# Notes:
+# * `--gpu-memory-utilization 0.94` is 23.1 GB of the 24 GB card. The weights are
+#   ~19 GB, and vLLM 0.27.1 reserves ~0.55 GB of CUDA graph memory inside that
+#   budget (its profiler reports 0.90 as "equivalent to 0.8771 without graph
+#   profiling"), so 0.90 left 0.8 GB of KV against the 0.81 GB a 24576-token
+#   sequence needs and the engine refused to start. KV here is small - only 8 of the
+#   32 layers are full attention, 4 KV heads, head_dim 256, so ~32 KB/token - and
+#   GPU 0 is otherwise idle, so the headroom is free. Lower it if something else
+#   lands on GPU 0.
+# * `--max-num-seqs 8` is required, not tuning. This is a hybrid model: 24 of 32
+#   layers are linear attention, whose state lives in a fixed pool of "Mamba cache
+#   blocks" sized by the same memory budget. At the 0.94 budget only 108 blocks fit,
+#   and vLLM's default max_num_seqs (256) exceeded that, so the engine aborted with
+#   "max_num_seqs (256) exceeds available Mamba cache blocks (108)". 8 is far more
+#   than a prompt rewriter needs and also shrinks CUDA graph capture, leaving more
+#   room for KV.
+# * `--reasoning-parser qwen3` splits the  thinking block into `reasoning_content`.
+#   Without it the thinking arrives inline and the client still recovers it from the
+#   ` response` tag, so both configurations produce the same record.
+# * `--enforce-eager` is not set: CUDA graphs capture fine on vLLM 0.27.1 for this
+#   architecture and are substantially faster. Add it only if capture fails.
+services:
+  pe-t2i:
+    image: vllm/vllm-openai:v0.27.1
+    container_name: qwen-pe-t2i
+    command:
+      - --model
+      - /model
+      - --served-model-name
+      - Qwen/Qwen-Image-2.1-PE-T2I
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8104"
+      - --dtype
+      - bfloat16
+      - --max-model-len
+      - "24576"
+      - --gpu-memory-utilization
+      - "0.94"
+      - --max-num-seqs
+      - "8"
+      - --limit-mm-per-prompt
+      - '{"image": 10}'
+      - --reasoning-parser
+      - qwen3
+    environment:
+      - HF_HOME=/root/.cache
+      - HF_HUB_OFFLINE=1
+      - VLLM_LOGGING_LEVEL=INFO
+    volumes:
+      - /home/aiserver/.cache/huggingface:/root/.cache/huggingface
+      - /home/aiserver/qwen-image-2.1/models/Qwen-Image-2.1-PE-T2I:/model:ro
+    ipc: host
+    shm_size: 8g
+    network_mode: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    restart: "no"
