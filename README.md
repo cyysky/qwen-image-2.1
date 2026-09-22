@@ -90,7 +90,8 @@ The model is 33 GB on disk; the first start also fills the JIT/kernel cache.
 
 GPU 2 is shared with the existing z-image service (~1.4 GB), and a 2048x2048
 request peaks near the card's capacity, so the default streams every component
-from host RAM (measured 4.0 GB peak at 1024x1024, 24.7 s text / 25.1 s edit):
+from host RAM (measured 8.0 GB peak at 1024x1024, 23.4 s text; adding
+`--vae-tiling true` drops that to 4.0 GB in 24.7 s):
 
 ```bash
 # default (full layerwise CPU offload, VAE tiling off)
@@ -131,6 +132,41 @@ Other knobs worth trying: `--dit-layerwise-resident-layers N`,
 `--layerwise-prefetch-size text_encoder=2`,
 `--vae-config.tile-sample-min-height 512` (larger tiles, less overlap work).
 See `RESULTS.md` for the full recipe comparison and measurements.
+
+### Cache-DiT: 2.5x faster, and lower peak at 2K
+
+Upstream lists Cache-DiT as one of the Day-0 SGLang features, and this build
+ships it, but it is **off by default**. It is a per-request switch, so turning it
+on needs no restart - add `"enable_cache_dit": true` to the body:
+
+```bash
+curl -s http://127.0.0.1:7853/v1/images/generations \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"Qwen-Image-2.1","prompt":"a capybara reading a book by candlelight",
+       "size":"2048x2048","num_inference_steps":40,"seed":42,
+       "enable_cache_dit":true}'
+```
+
+It runs a DBCache-style residual cache over the 40 denoising steps (SGLang
+logs `DBCache_F1B0_W4I1M0MC3_R0.24_N40`), skipping steps whose residual
+moved less than the threshold. Same prompt and seed, `--vae-tiling false`:
+
+| `enable_cache_dit` | Request | Wall | infer | Server peak | Card peak |
+| --- | --- | --- | --- | --- | --- |
+| `false` | 1024x1024, 40 steps | 23.37 s | 23.22 s | 7968 MB | 10316 MB |
+| `true` | 1024x1024, 40 steps | **9.28 s** | 9.12 s | 8034 MB | 10382 MB |
+| `false` | 2048x2048, 40 steps | 97.89 s | 97.47 s | 21522 MB | **23870 MB** |
+| `true` | 2048x2048, 40 steps | **35.84 s** | 35.43 s | **19466 MB** | 21816 MB |
+
+At 1024x1024 it is 2.5x faster at the same peak; at 2048x2048 it is 2.7x
+faster and 2 GB *lower*, because the skipped steps also skip the decode work
+that was pushing the card to 23870 MB of its 24564 MB. On the exact-text poster
+probe tesseract still reads `QWEN IMAGE 2.1` at 1024x1024 with it on. It is an
+approximation rather than a re-render: on the same prompt and seed the PNG differs
+from the uncached render by PSNR 29.05 dB at 1K (mean abs diff 0.86/255) and
+30.37 dB at 2K. Leave it off when you need a byte-for-byte reference, or set
+`SGLANG_CACHE_DIT_ENABLED=true` on the container to make it the server default
+(which also disables SGLang's auto-residency tuning). See `RESULTS.md`.
 
 ## OpenAI-compatible API
 
@@ -195,7 +231,8 @@ Responses look like the OpenAI images API plus SGLang's own telemetry:
 ```
 
 Requests also accept the SGLang extensions `width`/`height` (multiples of 32),
-`guidance_scale`, `negative_prompt`, `n`, `output_format`, `background`.
+`guidance_scale`, `negative_prompt`, `n`, `output_format`, `background` and
+`enable_cache_dit` (see the Cache-DiT section above).
 
 Notes that matter in practice:
 
@@ -350,16 +387,73 @@ Notes from using it, most of them learned the hard way:
   Use the rewriter for layout, typography and text inventory, use `--vae-tiling true`
   for the allocator, then read the strings back with `tesseract` to check.
 
+## What we took from upstream
+
+`QwenLM/Qwen-Image-2.1` is the source of the model, and its README also decides
+how we serve it. The parts that changed this folder:
+
+* **Cache-DiT.** Upstream lists it as a Day-0 SGLang feature next to prefix
+  caching and CUDA graphs. Measured above: 2.5x at 1K, 2.7x at 2K. It is the one
+  upstream lever that was sitting unused in this deployment.
+* **Prefix KV cache.** Upstream: the transformer caches the text and condition-image
+  prefix across denoising steps whenever the checkpoint has `causal_condition: true`
+  (the default). This is built in, not a flag: `dits/qwen_image21.py` keeps
+  `cache["key"]/["value"]` and `forward_with_replicated_kv_prefix` reuses them, so
+  a multi-reference edit encodes the condition images once. Nothing to configure.
+* **Memory optimisation.** Upstream's documented lever is
+  `pipe.enable_model_cpu_offload()`, which is exactly what the
+  `--dit-layerwise-offload true --layerwise-offload-components ...` recipe here
+  implements for SGLang.
+* **Defaults match.** Upstream's defaults are 40 steps and native 2K
+  (2048x2048), and its aspect-ratio table is byte-for-byte the `WH_RATIO_TO_SIZE`
+  map this folder uses, so a PE `wh_ratio` can be passed straight through as `size`.
+* **The PE checkpoints need their `think` block.** Upstream's
+  `prompt_rewrite/README.md` says both checkpoints were trained with a `think`
+  block and degrade without it, and warns that pointing `--ckpt` at stock
+  Qwen3.5-VL 9B yields `parse_ok: false`. That is consistent with what we
+  measured from the other side: sending `chat_template_kwargs:
+  {"enable_thinking": true}` changed nothing, because the template only suppresses
+  the block when the flag is explicitly `false` - so the rewrite arrives with its
+  thinking either way. Do not turn it off.
+* **Auditing rewrites.** Upstream's one-liner for finding failed parses:
+  `jq -s 'map(select(.parse_ok | not)) | length' out.jsonl`. Our PE records
+  carry the same `parse_ok` field.
+* **24 GB note.** Upstream warns that the ~20 GB bf16 weights want
+  `--max-model-len 12000` (or a lower `--gpu-memory-utilization`) on a 24 GB
+  card. That is the same wall we hit hosting the PE: 0.90 utilization left
+  0.8 GB of KV against the 0.81 GB a 24 576-token sequence needs.
+* **Alternatives we did not take.** Upstream also lists vLLM-Omni
+  (`vllm serve Qwen/Qwen-Image-2.1 --omni --port 8091`, with
+  `--step-execution --max-num-seqs 8` for step-wise batching and FP8/TP options
+  in the [recipe](https://recipes.vllm.ai/Qwen/Qwen-Image-2.1)), LightX2V
+  (`ModelTC/LightX2V`, tuned for speed and VRAM) and ComfyUI weights
+  (`Comfy-Org/Qwen-Image-2.1`, with ready-made t2i and edit workflows). We
+  stayed on SGLang-Diffusion because it exposes the OpenAI Images API on one port
+  and is the same surface the z-image service already uses.
+* **Official RTX 4090 reference.** The SGLang cookbook's 4090 row is
+  1024x1024, 40 steps, CFG 1: **18.68 s** generate / **21.68 s** edit at a
+  **22.7 GiB** peak, with "DiT and VAE resident, encoder layerwise offload".
+  Our recipes are slower (23.4 s at an 8.0 GB server peak with the shipped
+  default, 24.7 s at 4.0 GB with tiling on) because they offload the DiT as
+  well; the cookbook number is the tradeoff to compare against when the card is
+  not shared. The cookbook also notes that tiling "can change pixels near tile
+  boundaries" and that its integration is Python-source only (no verified Docker
+  image) - this folder builds its own nightly image for exactly that reason.
+
 ## Host GPU budget
 
-GPU 2 is 24 GB and shared with z-image (~1.4 GB resident). The 2K text path now
-peaks at 8.4 GB for the whole card and the 2K edit path at 20.4 GB, so 2K edits
-still leave only ~4 GB of slack. GPU 0 (llama-server `bonsai-2-27b`, ~17 GB) was
-stopped for this work and now hosts the prompt enhancer (`qwen-pe-t2i`, ~21 GB,
-`pe-t2i.yml`); it is still `systemctl enable`d, so `sudo systemctl start
-bonsai-2-27b` brings it back and it will also return on reboot, which would
-collide with the prompt enhancer on GPU 0. GPU 1 (vLLM, ~17.9 GB) was not
-touched.
+GPU 2 is 24 GB and shared with z-image (~1.4 GB resident). With
+`--vae-tiling true` the 2K text path peaks at 8.4 GB for the whole card and the
+2K edit path at 20.4 GB, so 2K edits still leave only ~4 GB of slack. The shipped
+default has tiling off, which is 23.9 GB at 2K text and ~0.7 GB of slack - turn
+tiling on, or add `"enable_cache_dit": true` (19.5 GB server peak), whenever
+anything else may be resident on the card.
+
+GPU 0 (llama-server `bonsai-2-27b`, ~17 GB) was stopped for this work and now
+hosts the prompt enhancer (`qwen-pe-t2i`, ~21 GB, `pe-t2i.yml`); it is still
+`systemctl enable`d, so `sudo systemctl start bonsai-2-27b` brings it back and it
+will also return on reboot, which would collide with the prompt enhancer on GPU 0.
+GPU 1 (vLLM, ~17.9 GB) was not touched.
 
 ## Measurement
 
@@ -370,6 +464,13 @@ python3 scripts/bench.py --tag layerwise-1k-40 --sizes 1024x1024 --steps 40 --re
 `bench.py` warms up once, then repeats each (size, steps) cell, recording
 client wall time, server `inference_time_s`, server `peak_memory_mb`, PNG size and
 GPU-2 VRAM sampled with `nvidia-smi`. Artifacts land in `results/<tag>/`.
+`--extra-json` merges extra request-body fields into every call, which is how the
+Cache-DiT numbers above were taken:
+
+```bash
+python3 scripts/bench.py --tag cachedit-1k-40 --sizes 1024x1024 --steps 40 \
+  --reps 3 --extra-json '{"enable_cache_dit": true}'
+```
 
 `scripts/quality.py` scores those PNGs (sharpness, entropy, alpha, OCR, PSNR), and
 `scripts/smoke.sh` is the one-shot health + generation check.

@@ -1,0 +1,39 @@
+{
+  "tag": "upstream-textprobe-base-2k",
+  "extra": null,
+  "vram": {
+    "vram_peak_mb": 23870,
+    "vram_idle_mb": 4214
+  },
+  "runs": [
+    {
+      "stem": "text_2048x2048_40_r0",
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "seed": 42,
+      "guidance_scale": 0.0,
+      "wall_ms": 97887.1,
+      "server_infer_s": 97.46903046604712,
+      "server_peak_mb": 21522.0,
+      "png_bytes": 4230447,
+      "image_count": 1,
+      "files": [
+        "text_2048x2048_40_r0_0.png"
+      ],
+      "usage": null
+    }
+  ],
+  "summary": [
+    {
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "reps": 1,
+      "wall_ms_median": 97887.1,
+      "wall_ms_min": 97887.1,
+      "server_infer_s_median": 97.469,
+      "server_peak_mb_max": 21522.0
+    }
+  ]
+}

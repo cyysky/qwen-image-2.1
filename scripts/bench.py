@@ -95,7 +95,11 @@ def post_edit(
     files = [
         ("image", (p.name, open(p, "rb"), "image/png")) for p in image_paths
     ]
-    form = {k: str(v) for k, v in payload.items() if v is not None}
+    form = {
+        k: ("true" if v is True else "false" if v is False else str(v))
+        for k, v in payload.items()
+        if v is not None
+    }
     try:
         r = requests.post(
             f"{base_url}/v1/images/edits",
@@ -138,6 +142,7 @@ def run_case(
     out_dir: Path,
     stem: str,
     timeout: float,
+    extra: dict | None = None,
 ) -> dict:
     width, height = (int(x) for x in size.split("x"))
     payload: dict = {
@@ -156,6 +161,8 @@ def run_case(
         payload["guidance_scale"] = guidance
     if background != "auto":
         payload["background"] = background
+    if extra:
+        payload.update(extra)
 
     started = time.perf_counter()
     if mode == "edit":
@@ -228,7 +235,16 @@ def main() -> int:
         help="artifact directory (default: <project>/results)",
     )
     ap.add_argument("--timeout", type=float, default=900.0)
+    ap.add_argument(
+        "--extra-json",
+        default=None,
+        help=(
+            "extra request-body fields merged into every call, e.g. "
+            '{"enable_cache_dit": true} for SGLang Cache-DiT'
+        ),
+    )
     args = ap.parse_args()
+    extra = json.loads(args.extra_json) if args.extra_json else None
 
     out_dir = Path(args.out).expanduser().resolve() / args.tag
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -257,6 +273,7 @@ def main() -> int:
         out_dir=out_dir,
         stem=f"warmup_{args.mode}_{args.sizes[0]}_{args.steps[0]}",
         timeout=args.timeout,
+        extra=extra,
     )
     print("warmup:", json.dumps(warm, indent=2))
 
@@ -279,6 +296,7 @@ def main() -> int:
                     out_dir=out_dir,
                     stem=stem,
                     timeout=args.timeout,
+                    extra=extra,
                 )
                 rows.append(row)
                 print(json.dumps(row))
@@ -287,7 +305,16 @@ def main() -> int:
     summary = summarize(rows)
 
     (out_dir / "results.json").write_text(
-        json.dumps({"tag": args.tag, "vram": vram, "runs": rows, "summary": summary}, indent=2)
+        json.dumps(
+            {
+                "tag": args.tag,
+                "extra": extra,
+                "vram": vram,
+                "runs": rows,
+                "summary": summary,
+            },
+            indent=2,
+        )
     )
     with open(out_dir / "results.csv", "w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))

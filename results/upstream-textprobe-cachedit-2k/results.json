@@ -1,0 +1,41 @@
+{
+  "tag": "upstream-textprobe-cachedit-2k",
+  "extra": {
+    "enable_cache_dit": true
+  },
+  "vram": {
+    "vram_peak_mb": 21816,
+    "vram_idle_mb": 4470
+  },
+  "runs": [
+    {
+      "stem": "text_2048x2048_40_r0",
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "seed": 42,
+      "guidance_scale": 0.0,
+      "wall_ms": 35838.9,
+      "server_infer_s": 35.43051144503988,
+      "server_peak_mb": 19468.0,
+      "png_bytes": 4110496,
+      "image_count": 1,
+      "files": [
+        "text_2048x2048_40_r0_0.png"
+      ],
+      "usage": null
+    }
+  ],
+  "summary": [
+    {
+      "mode": "text",
+      "size": "2048x2048",
+      "steps": 40,
+      "reps": 1,
+      "wall_ms_median": 35838.9,
+      "wall_ms_min": 35838.9,
+      "server_infer_s_median": 35.431,
+      "server_peak_mb_max": 19468.0
+    }
+  ]
+}

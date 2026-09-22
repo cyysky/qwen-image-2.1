@@ -1,0 +1,2 @@
+stem,mode,size,steps,seed,guidance_scale,wall_ms,server_infer_s,server_peak_mb,png_bytes,image_count,files,usage
+text_2048x2048_40_r0,text,2048x2048,40,42,0.0,35838.9,35.43051144503988,19468.0,4110496,1,['text_2048x2048_40_r0_0.png'],

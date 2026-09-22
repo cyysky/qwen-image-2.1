@@ -54,10 +54,12 @@ card including z-image.
 | C | 1024x1024, 40 steps, edit | 3 | 24.00 s | 23.83 s | **9.0 GB** | **11.44 GB** | OK |
 | C | 2048x2048, 40 steps, text | 2 | 97.76 s | 97.20 s | 21.6 GB | 23.98 GB | OK |
 | C | 2048x2048, 40 steps, edit | 1 | 135.30 s | 135.30 s | 19.6 GB | - | OK |
-| **C + `--vae-tiling true`** (current default) | 2048x2048, 40 steps, text | 3 | 99.9 s | 99.4 s | **5.8-6.0 GB** | **8.37 GB** | OK |
-| **C + `--vae-tiling true`** (current default) | 2048x2048, 40 steps, edit | 1 | 139.7 s | 139.2 s | 18.0 GB | 20.38 GB | OK |
-| **C + `--vae-tiling true`** (current default) | 1024x1024, 40 steps, text | 1 | 24.7 s | 24.4 s | **4.0 GB** | - | OK |
-| **C + `--vae-tiling true`** (current default) | 1024x1024, 40 steps, edit | 1 | 25.1 s | 24.8 s | **7.5 GB** | - | OK |
+| **C + `--vae-tiling true`** | 2048x2048, 40 steps, text | 3 | 99.9 s | 99.4 s | **5.8-6.0 GB** | **8.37 GB** | OK |
+| **C + `--vae-tiling true`** | 2048x2048, 40 steps, edit | 1 | 139.7 s | 139.2 s | 18.0 GB | 20.38 GB | OK |
+| **C + `--vae-tiling true`** | 1024x1024, 40 steps, text | 1 | 24.7 s | 24.4 s | **4.0 GB** | - | OK |
+| **C + `--vae-tiling true`** | 1024x1024, 40 steps, edit | 1 | 25.1 s | 24.8 s | **7.5 GB** | - | OK |
+| **C, `--vae-tiling false`** (shipped default) | 1024x1024, 40 steps, text | 2 | 23.4 s | 23.2 s | 8.0 GB | 10.3 GB | OK |
+| **C, `--vae-tiling false`** (shipped default) | 2048x2048, 40 steps, text | 1 | 97.9 s | 97.5 s | 21.5 GB | 23.9 GB | OK |
 
 Run-to-run spread was tight: the three 1024x1024 / 40-step repetitions
 landed within 0.5 % of each other (e.g. 20.90 / 20.96 / 20.99 s wall for
@@ -118,9 +120,12 @@ working set. Same prompt, same seed, 2048x2048, 40 steps, tiling off vs on:
 | `false` | 97.35 s | 96.8 s | 21572 MB | ~24.0 GB | yes, 1 |
 | `true` | 99.99 s | 99.4 s | **5.8-6.0 GB** | **8.37 GB** | **no** |
 
-Tiling costs ~2.5 s (2.6 %) and removes ~15.8 GB of peak, so it is now the
-default. Two consecutive tiled runs were byte-identical (`md5 b75ba2f0...`), so the
-tiled path is deterministic as well.
+Tiling costs ~2.5 s (2.6 %) and removes ~15.8 GB of peak, so it is the recipe to
+use whenever 2K matters. The shipped default keeps it off because that is what the
+operator verified in use (see the recipe C rows in the speed table). Two consecutive
+tiled runs were byte-identical (`md5 b75ba2f0...`), so the tiled path is
+deterministic as well, and the tiled 1K PNG is byte-identical to the untiled one
+(`ba27b0ac...`).
 
 Tiling also engages at 1024x1024 (a 1024 px sample exceeds the 256 px tile
 minimum), where it costs ~1.3 s (5 %) and cuts the peak from 8.0 GB to 4.0 GB for
@@ -144,6 +149,43 @@ untiled images, so there is no seam. Text OCR is comparable - the tiled run read
 `THE LAST LIGHT` and `IN THEATERS OCTOBER 24`, the untiled run reads
 `Every ending is a beginning` and `IN THEATERS OCTOBER 24`. Tiling is a numerics
 change in the decoder, not a quality regression.
+
+## Upstream's Cache-DiT: 2.5-2.7x for free
+
+`QwenLM/Qwen-Image-2.1` lists Cache-DiT as one of the Day-0 SGLang
+features. This build ships it, it is **off by default**, and it is a per-request
+switch (`"enable_cache_dit": true`), so no restart is needed to compare it.
+
+The log confirms it is a DBCache residual cache over the denoise steps:
+`DBCache_F1B0_W4I1M0MC3_R0.24_N40_CFG0`, i.e. warm up 4 steps, then skip any
+step whose residual moved less than 0.24, at most 3 skipped steps in a row. It wraps
+the DiT through a custom `ForwardPattern.Pattern_3` block adapter because this is the
+native SGLang DiT rather than a diffusers one, and it is compatible with the
+layerwise offload (skipped blocks are not streamed).
+
+Same prompt, same seed, `--vae-tiling false`, repetitions where noted:
+
+| `enable_cache_dit` | Request | Reps | Wall | infer | Server peak | Card peak |
+| --- | --- | --- | --- | --- | --- | --- |
+| `false` | 1024x1024, 40 steps, text | 2 | 23.37 s | 23.22 s | 7968 MB | 10316 MB |
+| `true` | 1024x1024, 40 steps, text | 2 | **9.28 s** | 9.12 s | 8034 MB | 10382 MB |
+| `false` | 2048x2048, 40 steps, text | 1 | 97.89 s | 97.47 s | 21522 MB | **23870 MB** |
+| `true` | 2048x2048, 40 steps, text | 1 | **35.84 s** | 35.43 s | **19466 MB** | 21816 MB |
+
+Two things matter beyond the raw speedup:
+
+* **At 2K it lowers the peak by ~2 GB.** The uncached 2K run peaked at 23870 MB
+  of the card's 24564 MB - the same coin-flip that lost text in the earlier OOM.
+  With the cache it peaked at 21816 MB, which is ~2.7 GB of slack instead of ~0.7 GB.
+* **The output is an approximation, not a re-render.** Same prompt and seed, cached
+  vs uncached, both at `--vae-tiling false`: PSNR **29.05 dB** at 1024x1024 (mean
+  abs diff 0.86/255) and **30.37 dB** at 2048x2048 (mean abs diff 0.82/255).
+  Sharpness/entropy move by <1 %. On the exact-text poster probe tesseract still
+  reads `QWEN IMAGE 2.1` at 1024x1024 with the cache on; at 2048x2048 both the
+  cached and uncached runs read the same partial `... IMAGE 2.1`, so the 2K
+  legibility ceiling is the model, not the cache. (The 2K PSNR in the section
+  above, 23.65 dB, compares a tiled baseline against an untiled cached run and
+  therefore mixes two changes; the 30.37 dB row here is the clean one.)
 
 ## VRAM headroom on the shared card
 
@@ -208,6 +250,10 @@ python3 scripts/bench.py --tag layerwise-2k-40  --sizes 2048x2048 --steps 40 --r
 python3 scripts/bench.py --tag layerwise-edit-1k-40 --mode edit \
   --image refs/neon-ref.png --prompt "Add a glowing red paper lantern hanging above the sign" \
   --sizes 1024x1024 --steps 40 --reps 3
+
+# Cache-DiT on the same server, no restart (per-request switch)
+python3 scripts/bench.py --tag upstream-cachedit-1k-40 --sizes 1024x1024 --steps 40 \
+  --reps 2 --extra-json '{"enable_cache_dit": true}'
 
 # quality
 python3 scripts/quality.py results/layerwise-1k-40
@@ -293,6 +339,11 @@ on is still the way to make 2K text rendering deterministic - it peaks at 5768 M
   z-image), so the card is ~83 % full and there is ~4 GB of headroom; the text
   path peaks at only 5.8 GB. Anything else landing on GPU 2 during a 2K *edit* can
   still OOM it.
+* Cache-DiT is an approximation: at the default threshold it changes the PNG by
+  PSNR 29-30 dB. It is per request (`"enable_cache_dit": true`), and turning it
+  on for a whole server (`SGLANG_CACHE_DIT_ENABLED=true`) also disables SGLang's
+  auto-residency tuning (`auto_residency_args_skip_reason` returns
+  "cache-dit enabled"), so the per-request switch is the safer way to use it.
 * `n > 1`, batch size > 1 and `guidance_scale > 1` (true CFG) were not
   benchmarked; they raise the peak memory of the same stages measured above.
 * `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` was tried to reclaim

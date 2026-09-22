@@ -1,0 +1,58 @@
+{
+  "tag": "upstream-cachedit-1k-40",
+  "extra": {
+    "enable_cache_dit": true
+  },
+  "vram": {
+    "vram_peak_mb": 10382,
+    "vram_idle_mb": 5486
+  },
+  "runs": [
+    {
+      "stem": "text_1024x1024_40_r0",
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 40,
+      "seed": 42,
+      "guidance_scale": 0.0,
+      "wall_ms": 9276.0,
+      "server_infer_s": 9.116926398011856,
+      "server_peak_mb": 8034.0,
+      "png_bytes": 2066475,
+      "image_count": 1,
+      "files": [
+        "text_1024x1024_40_r0_0.png"
+      ],
+      "usage": null
+    },
+    {
+      "stem": "text_1024x1024_40_r1",
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 40,
+      "seed": 43,
+      "guidance_scale": 0.0,
+      "wall_ms": 9286.7,
+      "server_infer_s": 9.115283024031669,
+      "server_peak_mb": 8034.0,
+      "png_bytes": 1924539,
+      "image_count": 1,
+      "files": [
+        "text_1024x1024_40_r1_0.png"
+      ],
+      "usage": null
+    }
+  ],
+  "summary": [
+    {
+      "mode": "text",
+      "size": "1024x1024",
+      "steps": 40,
+      "reps": 2,
+      "wall_ms_median": 9281.4,
+      "wall_ms_min": 9276.0,
+      "server_infer_s_median": 9.116,
+      "server_peak_mb_max": 8034.0
+    }
+  ]
+}
