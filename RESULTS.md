@@ -9,7 +9,7 @@ Raw artifacts (PNGs, per-run JSON/CSV, VRAM samples) are in `results/<tag>/`.
 | Item | Value |
 | --- | --- |
 | GPUs | 3x RTX 4090 24 GB |
-| GPU 0 | llama-server, ~17.0 GB used (not touched) |
+| GPU 0 | free (llama-server stopped for this work; 15 MiB idle) |
 | GPU 1 | vLLM, ~17.9 GB used (not touched) |
 | GPU 2 | z-image SGLang diffusion, ~1.4 GB used; Qwen-Image-2.1 co-resident |
 | Model | Qwen/Qwen-Image-2.1, 33 GB on disk, mounted read-only at `/model` |
@@ -54,6 +54,10 @@ card including z-image.
 | C | 1024x1024, 40 steps, edit | 3 | 24.00 s | 23.83 s | **9.0 GB** | **11.44 GB** | OK |
 | C | 2048x2048, 40 steps, text | 2 | 97.76 s | 97.20 s | 21.6 GB | 23.98 GB | OK |
 | C | 2048x2048, 40 steps, edit | 1 | 135.30 s | 135.30 s | 19.6 GB | - | OK |
+| **C + `--vae-tiling true`** (current default) | 2048x2048, 40 steps, text | 3 | 99.9 s | 99.4 s | **5.8-6.0 GB** | **8.37 GB** | OK |
+| **C + `--vae-tiling true`** (current default) | 2048x2048, 40 steps, edit | 1 | 139.7 s | 139.2 s | 18.0 GB | 20.38 GB | OK |
+| **C + `--vae-tiling true`** (current default) | 1024x1024, 40 steps, text | 1 | 24.7 s | 24.4 s | **4.0 GB** | - | OK |
+| **C + `--vae-tiling true`** (current default) | 1024x1024, 40 steps, edit | 1 | 25.1 s | 24.8 s | **7.5 GB** | - | OK |
 
 Run-to-run spread was tight: the three 1024x1024 / 40-step repetitions
 landed within 0.5 % of each other (e.g. 20.90 / 20.96 / 20.99 s wall for
@@ -82,6 +86,65 @@ recipe A), and the GPU-2 idle baseline stayed at 3.1-4.5 GB with z-image residen
   size and endpoint works out of the box on the shared card. B is the documented
   faster option for 1024x1024-only workloads.
 
+## The 2048x2048 OOM, and the fix
+
+Recipe C originally still tripped the allocator on 2048x2048: the run finished and
+returned HTTP 200, but the log carried
+
+```
+[rank0]:[W922 05:15:28] memory allocation failed with OOM on device 0 while
+trying to allocate 3630170112 bytes (free: 202833920, total: 25250627584).
+[DecodingStage] finished in 0.9030 seconds
+Peak memory usage: 21540.00 MB
+```
+
+Two things about that message are easy to misread. "device 0" is **GPU 2**: the
+container is pinned with `device_ids: ['2']`, so it sees its only GPU as local
+device 0. And the failure is *non-fatal*: the decode fell back and still wrote a
+PNG, but the image it wrote had lost its text, which is the "text rendering is
+failed" symptom.
+
+`--vae-cpu-offload true` was tried first and **changed nothing** (same 3.6 GB
+request, same peak, same OOM). SGLang's own decode stage explains why in a comment
+at `stages/decoding.py`: `--vae-cpu-offload` moves VAE *weights*, not the
+activations that overflow.
+
+The fix is `--vae-tiling true`, which is what SGLang's OOM advice points at. It
+splits the decode into 256x256 tiles (stride 192, overlap blending) and bounds the
+working set. Same prompt, same seed, 2048x2048, 40 steps, tiling off vs on:
+
+| `--vae-tiling` | Wall | infer | Server peak | `nvidia-smi` peak (card) | OOM logged |
+| --- | --- | --- | --- | --- | --- |
+| `false` | 97.35 s | 96.8 s | 21572 MB | ~24.0 GB | yes, 1 |
+| `true` | 99.99 s | 99.4 s | **5.8-6.0 GB** | **8.37 GB** | **no** |
+
+Tiling costs ~2.5 s (2.6 %) and removes ~15.8 GB of peak, so it is now the
+default. Two consecutive tiled runs were byte-identical (`md5 b75ba2f0...`), so the
+tiled path is deterministic as well.
+
+Tiling also engages at 1024x1024 (a 1024 px sample exceeds the 256 px tile
+minimum), where it costs ~1.3 s (5 %) and cuts the peak from 8.0 GB to 4.0 GB for
+text and 9.0 GB to 7.5 GB for edits. The 1K text probe still OCRs exactly as
+`QWEN IMAGE 2.1`.
+
+### Tiling does not cost quality
+
+Same prompt and seed, tiled vs untiled 2048x2048 PNGs compared pixel-wise:
+
+| Metric | Value |
+| --- | --- |
+| Mean absolute difference | 0.93 / 255 (0.36 %) |
+| Pixels differing by more than 2 | 13.8 % |
+| Max channel difference | 79 |
+| Excess gradient energy at tile boundaries | 0.055 vs a 4.1 baseline (1.3 %) |
+
+The differences are diffuse rather than concentrated on the tile grid: rows and
+columns at multiples of 192 carry essentially the same gradient energy in the tiled and
+untiled images, so there is no seam. Text OCR is comparable - the tiled run reads
+`THE LAST LIGHT` and `IN THEATERS OCTOBER 24`, the untiled run reads
+`Every ending is a beginning` and `IN THEATERS OCTOBER 24`. Tiling is a numerics
+change in the decoder, not a quality regression.
+
 ## VRAM headroom on the shared card
 
 | Recipe | GPU-2 idle | GPU-2 peak (1K) | GPU-2 peak (2K) | Headroom at peak |
@@ -89,6 +152,7 @@ recipe A), and the GPU-2 idle baseline stayed at 3.1-4.5 GB with z-image residen
 | A | 3.1 GB | 24.01 GB | 24.01 GB | ~0.5 GB (card full) |
 | B | 3.8 GB | 18.83 GB | 23.72 GB | ~0.8 GB at 2K |
 | C | 4.2 GB | 10.32 GB | 23.98 GB | ~13.7 GB at 1K |
+| **C + `--vae-tiling true`** (shipped default) | 4.2 GB | 10.3 GB | **8.37 GB text / 20.38 GB edit** | **~16 GB text / ~4 GB edit** |
 
 The idle figures include z-image's ~1.4 GB, which stayed up and healthy for the
 whole measurement series. A and B push the card to ~98 % of capacity at 1K and 2K
@@ -158,12 +222,15 @@ sudo env SGLANG_OFFLOAD_ARGS="--performance-mode memory" \
 
 ## Known limitations
 
-* 2048x2048 **edits** only fit with recipe C on this shared card; they take
-  135 s and peak at 19.6 GB. A and B OOM there.
-* 2048x2048 text-to-image peaks at ~21.6-21.4 GB under every recipe, because
-  the 2K cost is dominated by activations (256x256 latents) and the RGBA VAE
-  decode, not by weights. With z-image's 1.4 GB resident, the card is ~98 % full
-  at that point, so anything else landing on GPU 2 during a 2K run can OOM it.
+* 2048x2048 works at 5.8 GB (text) and 18.0 GB (edit) with the shipped
+  default, which adds `--vae-tiling true` to recipe C. Without tiling the decode
+  stage allocates 3.6 GB in one tensor and trips the allocator at 2K, producing a
+  text-lossy image. A and B OOM on 2K edits even with tiling, because their peak
+  comes from resident weights rather than the decode.
+* 2048x2048 edits still peak at 18.0 GB (20.4 GB for the whole card including
+  z-image), so the card is ~83 % full and there is ~4 GB of headroom; the text
+  path peaks at only 5.8 GB. Anything else landing on GPU 2 during a 2K *edit* can
+  still OOM it.
 * `n > 1`, batch size > 1 and `guidance_scale > 1` (true CFG) were not
   benchmarked; they raise the peak memory of the same stages measured above.
 * `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` was tried to reclaim

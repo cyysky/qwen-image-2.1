@@ -15,6 +15,15 @@
 # Pinned to GPU 2 only, fully CPU-offloaded: every component (DiT, Qwen3-VL
 # text encoder, image encoder, VAE) streams its weights from host RAM per layer,
 # so the pipeline co-exists with the z-image service that shares the same card.
+# `--vae-tiling true` is what keeps 2048x2048 alive on a shared 24 GB card. The
+# decode stage allocates ~3.6 GB in a single tensor at 2K; with only ~200 MB free
+# that trips the CUDA allocator (`memory allocation failed with OOM on device 0`,
+# peak 21.5 GB for this container alone). SGLang's own decode stage points at
+# tiling for this: `--vae-cpu-offload` only moves VAE *weights* to the host, not
+# the activations that overflow, and measurably does not help. Tiling splits the
+# decode into 256x256 tiles (stride 192) and bounds the working set instead.
+# The latent tensors stay on the GPU, so decode remains a small slice of 2K time.
+#
 # Measured on this box (see RESULTS.md): 1024x1024 / 40 steps is 23.4 s text and
 # 24.0 s edit at an 8-9 GB peak, 2048x2048 / 40 steps is 97.8 s text and
 # 135.3 s edit at a ~21.6 GB peak. This is the only measured recipe where
@@ -44,7 +53,7 @@ services:
       --host 0.0.0.0
       --port 7853
       --tp-size 1
-      ${SGLANG_OFFLOAD_ARGS:---performance-mode manual --dit-layerwise-offload true --layerwise-offload-components dit text_encoder image_encoder vae}
+      ${SGLANG_OFFLOAD_ARGS:---performance-mode manual --dit-layerwise-offload true --layerwise-offload-components dit text_encoder image_encoder vae --vae-tiling true}
       --output-path /sgl-workspace/sglang/outputs
       '
     environment:

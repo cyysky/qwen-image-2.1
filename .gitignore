@@ -13,3 +13,7 @@ results/**/*.jpg
 
 __pycache__/
 *.pyc
+
+# Transient: progress log for the optional prompt-rewriter (PE) checkpoint
+# download. The download command itself is in README.md.
+logs/pe-download.log

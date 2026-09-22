@@ -89,13 +89,23 @@ The model is 33 GB on disk; the first start also fills the JIT/kernel cache.
 
 GPU 2 is shared with the existing z-image service (~1.4 GB), and a 2048x2048
 request peaks near the card's capacity, so the default streams every component
-from host RAM (measured 8-9 GB peak at 1024x1024, 23.4 s text / 24.0 s edit):
+from host RAM and tiles the VAE decode (measured 4.0 GB peak at 1024x1024, 24.7 s
+text / 25.1 s edit):
 
 ```bash
-# default (full layerwise CPU offload, lowest VRAM, every endpoint works)
+# default (full layerwise CPU offload + VAE tiling, every endpoint works)
 --performance-mode manual --dit-layerwise-offload true \
-  --layerwise-offload-components dit text_encoder image_encoder vae
+  --layerwise-offload-components dit text_encoder image_encoder vae \
+  --vae-tiling true
 ```
+
+`--vae-tiling true` is what keeps 2048x2048 alive. Without it the decode stage
+allocates ~3.6 GB in one tensor at 2K; with only ~200 MB free on the shared card
+that trips the CUDA allocator (`memory allocation failed with OOM on device 0`).
+Measured on the same prompt and seed: tiling off peaks at 21572 MB in 96.8 s with a
+logged OOM, tiling on peaks at **5768 MB** in 99.4 s with none. `--vae-cpu-offload
+true` does not help here: it moves VAE *weights*, not the activations that
+overflow, and was measured to change nothing.
 
 `--performance-mode memory` is ~3 s (14 %) faster at 1024x1024 (20.0 s text /
 23.9 s edit) but peaks ~5 GB higher and OOMs on 2048x2048 edits. Switch recipes
@@ -108,7 +118,8 @@ sudo env SGLANG_OFFLOAD_ARGS="--performance-mode memory" \
 ```
 
 Other knobs worth trying: `--dit-layerwise-resident-layers N`,
-`--layerwise-prefetch-size text_encoder=2`, `--vae-cpu-offload true`.
+`--layerwise-prefetch-size text_encoder=2`,
+`--vae-config.tile-sample-min-height 512` (larger tiles, less overlap work).
 See `RESULTS.md` for the full recipe comparison and measurements.
 
 ## OpenAI-compatible API
@@ -185,9 +196,51 @@ Notes that matter in practice:
 * `background: "transparent"` returns a real RGBA cutout; `output_format`
   defaults to `png` (see the Dockerfile patch) so alpha survives.
 * 2048x2048 edits only fit with the default full-offload recipe and take
-  ~135 s; 1024x1024 generation is ~23 s.
+  ~140 s and peak at 20.4 GB for the whole card; 1024x1024 generation is ~25 s
+  and peaks at 4.0 GB.
 * `guidance_scale` defaults to 1.0 (CFG off) and `n` defaults to 1.
 * OpenAI SDK / LiteLLM clients only need the base URL `http://127.0.0.1:7853/v1`.
+
+## Text rendering and prompt rewriting
+
+This SGLang service does **not** rewrite prompts. `--enable-prompt-rewrite`
+exists in SGLang but is wired only for LongCat-Image and Ernie-Image; for
+Qwen-Image-2.1 the prompt goes straight into the Qwen3-VL text encoder. Short
+quoted strings usually render exactly (tesseract reads `HELLO WORLD` and
+`QWEN IMAGE 2.1` back verbatim at 1024x1024), while longer multi-string
+layouts (title + tagline + date) often lose text.
+
+The upstream repo ships the missing piece as a separate model, not as part of the
+serving stack: `prompt_rewrite/` with two Qwen3.5-VL 9B checkpoints, ~18.8 GB each
+in bf16.
+
+| Checkpoint | Purpose |
+| --- | --- |
+| `Qwen/Qwen-Image-2.1-PE-T2I` | expands a text-to-image prompt |
+| `Qwen/Qwen-Image-2.1-PE-I2I` | rewrites an edit instruction |
+
+They return JSON `{"rewritten_prompt": ..., "wh_ratio": "16:9"}` and are served as
+an OpenAI-compatible vLLM endpoint (`prompt_rewrite/serve.sh`, port 8100). `wh_ratio`
+maps to a canvas via `WH_RATIO_TO_SIZE` (1:1 2048x2048, 4:3 2400x1792, 3:4
+1792x2400, 3:2 2528x1696, 2:3 1696x2528, 16:9 2752x1536, 9:16 1536x2752).
+
+That service is not running yet: `prompt_rewrite/requirements.txt` pins
+`vllm==0.19.1` and `transformers==5.4.0`, while this container ships
+transformers 5.12.1 and has no `vllm` module, so the upstream `serve.sh` cannot
+run inside it. It needs a second container on the now-free GPU 0, plus a proxy in
+front of `POST /v1/images/generations` that calls the rewriter and then sets `size`
+from `wh_ratio`. Both checkpoints are downloading to
+`models/Qwen-Image-2.1-PE-T2I` and `models/Qwen-Image-2.1-PE-I2I` (gitignored);
+see `logs/pe-download.log`.
+
+## Host GPU budget
+
+GPU 2 is 24 GB and shared with z-image (~1.4 GB resident). The 2K text path now
+peaks at 8.4 GB for the whole card and the 2K edit path at 20.4 GB, so 2K edits
+still leave only ~4 GB of slack. GPU 0 (llama-server `bonsai-2-27b`, ~17 GB) was
+stopped for this work and is now free; it is still `systemctl enable`d, so
+`sudo systemctl start bonsai-2-27b` brings it back and it will also return on
+reboot. GPU 1 (vLLM, ~17.9 GB) was not touched.
 
 ## Measurement
 
