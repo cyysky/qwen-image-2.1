@@ -27,6 +27,7 @@ qwen-image-2.1/
   scripts/quality.py  pixel metrics (sharpness, entropy, alpha, OCR, PSNR)
   scripts/smoke.sh    one-shot health + generation check
   logs/               download / docker build / serve logs
+  playground/         FastAPI + browser UI to test prompts and edits by hand
 ```
 
 ## Model
@@ -491,6 +492,35 @@ hosts the edit prompt enhancer (`qwen-pe-i2i`, ~21 GB, `pe-i2i.yml`); it is stil
 will also return on reboot, which would collide with the prompt enhancer on GPU 0.
 Only one of the two prompt enhancers fits on the card at a time.
 GPU 1 (vLLM, ~17.9 GB) was not touched.
+
+## Prompt playground
+
+`playground/` is a small FastAPI app plus a no-build browser UI for trying
+prompts and edits against this service by hand. Every endpoint, model, key and
+default lives in `.env` (copy `.env.example`), including which prompt enhancer to
+use - no code changes to re-point the app.
+
+- **Generate tab** - text-to-image with size, steps, guidance, seed, `n`, format,
+  background and negative prompt.
+- **Edit tab** - up to 10 reference images posted as multipart to
+  `/v1/images/edits`.
+- **Enhancer** - rewrite the prompt at the UI level before anything is submitted:
+  `ds4-flash` on `router.pixel-space.co`, the `pe-t2i` checkpoint on 8104, or the
+  `pe-i2i` edit checkpoint on 8105 (it reads the reference images and can answer
+  with a `ratio_follow` canvas). Each engine is gated to the tab it supports.
+- Results keep their PNG plus params, `inference_time_s` and `peak_memory_mb`, and
+  persist in the browser's IndexedDB so a refresh does not lose them.
+
+```powershell
+cd playground
+pip install -r requirements.txt
+python app.py                    # http://127.0.0.1:7860
+python app.py --check            # print config, probe every image endpoint
+python app.py --check-enhancer   # also send one tiny enhancer request
+```
+
+`tools/smoke_test.py` boots a mock upstream, so the whole UI can be exercised
+with no GPU. See `playground/README.md` for the full `.env` reference.
 
 ## Measurement
 

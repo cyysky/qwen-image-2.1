@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Qwen-Image-2.1 Playground</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">QI</span>
+      <div>
+        <h1>Qwen-Image-2.1 Playground</h1>
+        <p>Text-to-image &amp; image edit testing, enhanced by <code id="enhancer-model-label">ds4-flash</code></p>
+      </div>
+    </div>
+    <div class="endpoint-bar">
+      <span class="label">Endpoint</span>
+      <div id="endpoint-pills" class="pills"></div>
+      <button id="health-btn" class="btn btn-ghost" type="button">Check health</button>
+      <button id="reload-env-btn" class="btn btn-ghost" type="button" title="Re-read .env">Reload .env</button>
+    </div>
+  </header>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <main class="layout">
+    <section class="panel controls">
+      <div class="tabs" role="tablist">
+        <button id="tab-generate" class="tab is-active" type="button" role="tab">Generate</button>
+        <button id="tab-edit" class="tab" type="button" role="tab">Edit</button>
+      </div>
+
+      <div class="field">
+        <label for="model-input">Model</label>
+        <div class="row">
+          <input id="model-input" list="model-list" placeholder="Qwen-Image-2.1" autocomplete="off" />
+          <datalist id="model-list"></datalist>
+          <button id="load-models-btn" class="btn btn-ghost" type="button" title="Fetch /v1/models from this endpoint">Load</button>
+        </div>
+      </div>
+
+      <div id="panel-generate" class="tab-panel">
+        <div class="field">
+          <div class="label-row">
+            <label for="prompt-input">Prompt</label>
+            <button id="enhance-btn" class="btn btn-accent" type="button">Enhance with enhancer</button>
+          </div>
+          <textarea id="prompt-input" rows="7" placeholder="a capybara reading a book by candlelight"></textarea>
+        </div>
+      </div>
+
+      <div id="enhance-panel" class="enhance-panel" hidden>
+        <div class="label-row">
+          <span class="label">Enhanced prompt <span id="enhance-engine-tag" class="hint"></span></span>
+          <div class="row">
+            <button id="use-enhanced-btn" class="btn btn-ghost" type="button">Use</button>
+            <button id="revert-prompt-btn" class="btn btn-ghost" type="button">Revert</button>
+          </div>
+        </div>
+        <textarea id="enhanced-output" rows="6" spellcheck="false"></textarea>
+        <div id="enhance-ratio" class="enhance-ratio" hidden>
+          <span class="chip">ratio <b id="enhance-ratio-value">-</b></span>
+          <span class="chip">size <b id="enhance-size-value">-</b></span>
+          <button id="apply-ratio-btn" class="btn btn-ghost small" type="button">Apply suggested size</button>
+          <button id="apply-negative-btn" class="btn btn-ghost small" type="button" hidden>Use its negative prompt</button>
+        </div>
+        <p id="enhance-warning" class="warn" hidden></p>
+      </div>
+
+      <div id="panel-edit" class="tab-panel" hidden>
+        <div class="field">
+          <div class="label-row">
+            <label for="edit-prompt-input">Edit instruction</label>
+            <button id="edit-enhance-btn" class="btn btn-accent" type="button">Enhance with enhancer</button>
+          </div>
+          <textarea id="edit-prompt-input" rows="5" placeholder="Add a glowing red paper lantern hanging above the sign"></textarea>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label>Reference images</label>
+            <span id="ref-count" class="hint">0 / 10</span>
+          </div>
+          <div id="dropzone" class="dropzone">
+            <input id="file-input" type="file" accept="image/*" multiple hidden />
+            <p>Drop images here or <button id="browse-btn" class="link" type="button">browse</button></p>
+            <p class="hint">PNG, JPG or WebP. One <code>-F image=</code> per reference.</p>
+          </div>
+          <div id="thumbs" class="thumbs"></div>
+          <button id="clear-refs-btn" class="btn btn-ghost" type="button">Clear references</button>
+        </div>
+      </div>
+
+      <details class="advanced" open>
+        <summary>Parameters</summary>
+
+        <div class="field">
+          <label for="enhance-engine-select">Enhancer engine</label>
+          <select id="enhance-engine-select"></select>
+          <p id="enhance-engine-note" class="hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="preset-select">Enhancer preset</label>
+          <select id="preset-select"></select>
+        </div>
+
+        <div class="field">
+          <label for="enhance-instruction">Extra enhancer instruction <span class="hint">optional</span></label>
+          <input id="enhance-instruction" placeholder="keep the neon sign readable" />
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="size-select">Size</label>
+            <select id="size-select"></select>
+          </div>
+          <div class="field">
+            <label for="steps-input">Steps</label>
+            <input id="steps-input" type="number" min="1" max="200" step="1" />
+          </div>
+        </div>
+
+        <div class="grid-2 custom-size" id="custom-size" hidden>
+          <div class="field">
+            <label for="width-input">Width <span class="hint">multiple of 32</span></label>
+            <input id="width-input" type="number" min="32" step="32" />
+          </div>
+          <div class="field">
+            <label for="height-input">Height <span class="hint">multiple of 32</span></label>
+            <input id="height-input" type="number" min="32" step="32" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="seed-input">Seed</label>
+            <div class="row">
+              <input id="seed-input" type="number" min="0" step="1" />
+              <button id="seed-random-btn" class="btn btn-ghost" type="button" title="New random seed">&#8635;</button>
+              <label class="checkbox" title="Reuse this seed for every request">
+                <input id="seed-lock" type="checkbox" /> lock
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="guidance-input">Guidance scale</label>
+            <input id="guidance-input" type="number" min="0" max="20" step="0.1" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="n-input">Images (n)</label>
+            <input id="n-input" type="number" min="1" max="10" step="1" />
+          </div>
+          <div class="field">
+            <label for="format-select">Output format</label>
+            <select id="format-select">
+              <option value="png">png</option>
+              <option value="jpeg">jpeg</option>
+              <option value="webp">webp</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="background-select">Background</label>
+          <select id="background-select">
+            <option value="auto">auto</option>
+            <option value="transparent">transparent (RGBA)</option>
+            <option value="opaque">opaque</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="negative-input">Negative prompt</label>
+          <input id="negative-input" placeholder="blurry, watermark, extra limbs" />
+        </div>
+
+        <label class="checkbox">
+          <input id="enhance-toggle" type="checkbox" />
+          Enhance the prompt before submitting
+        </label>
+      </details>
+
+      <div class="actions">
+        <button id="submit-btn" class="btn btn-primary" type="button">Generate</button>
+        <button id="cancel-btn" class="btn btn-ghost" type="button" disabled>Cancel</button>
+        <button id="copy-curl-btn" class="btn btn-ghost" type="button">Copy as curl</button>
+      </div>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section class="panel results-panel">
+      <div class="panel-head">
+        <h2>Results <span id="result-count" class="hint">0</span></h2>
+        <div class="row">
+          <span id="storage-note" class="hint"></span>
+          <button id="download-all-btn" class="btn btn-ghost" type="button">Download all</button>
+          <button id="clear-results-btn" class="btn btn-ghost" type="button">Clear</button>
+        </div>
+      </div>
+      <div id="results" class="results"></div>
+      <p id="results-empty" class="empty">No images yet. Write a prompt and hit Generate. Results are saved in this browser, so they survive a refresh.</p>
+    </section>
+
+    <section class="panel history-panel">
+      <div class="panel-head">
+        <h2>Prompt history</h2>
+        <button id="clear-history-btn" class="btn btn-ghost" type="button">Clear</button>
+      </div>
+      <div id="history" class="history"></div>
+      <p id="history-empty" class="empty">Prompts you run show up here.</p>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox" hidden>
+    <img id="lightbox-img" alt="" />
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
