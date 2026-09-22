@@ -272,6 +272,52 @@ It streams a ~16k-token thinking block, so expect minutes per prompt, and return
 `restart: "no"`, and the bonsai unit on GPU 0 is still `enable`d, so a reboot
 reclaims the card.
 
+### Using it in practice
+
+It is a two-step flow, not a drop-in proxy. The rewrite is text-only and knows
+nothing about the image service, so the caller does the render:
+
+```bash
+# 1. rewrite (once per prompt)
+python3 client.py --task t2i --model Qwen/Qwen-Image-2.1-PE-T2I \
+  --system-prompt prompts/system_prompt_t2i.txt --port 8104 "your prompt"
+
+# 2. render the rewrite at the size implied by wh_ratio
+curl -s http://127.0.0.1:7853/v1/images/generations \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"Qwen-Image-2.1","prompt":"<positive_prompt>","size":"1696x2528",
+       "num_inference_steps":40,"seed":42}'
+```
+
+Notes from using it, most of them learned the hard way:
+
+* **One prompt per call, or a JSONL batch.** The client takes exactly one of a
+  positional prompt or `--input`/`--output`, and the input record is
+  `{"id": ..., "prompt": ..., "input_images": []}`. A long prompt is easier to
+  pass through the JSONL than to quote on the command line.
+* **Budget 1-3 minutes per prompt.** It streams a thinking block of roughly the
+  same size as a long prompt (a 3,720-char infographic prompt produced 7,270 chars
+  of thinking and 7,614 chars of `positive_prompt` in **74 s**). Cost is per prompt,
+  not per image, and the rewrite is deterministic text you can cache and reuse for
+  every seed and step count.
+* **`positive_prompt` is what you render, `thinking` is not.** The record is
+  `{id, task, raw_prompt, task_type, thinking, positive_prompt, negative_prompt,
+  wh_ratio, ratio_follow, parse_ok}`. `parse_ok: true` is the pass/fail signal;
+  `negative_prompt` has come back empty on every t2i prompt tried.
+* **Text strings survive, hex colours do not.** On a dense 35-string infographic
+  prompt every quoted string came back verbatim, including the long metric lines, and
+  the model kept the requested 2:3 ratio without being told twice. It does rewrite
+  punctuation to ASCII (`-` for en/em dash, `->` for an arrow) and splits long
+  strings into separate positioned text elements, which is fine for the renderer
+  because each becomes its own text run. Colour names are hit and miss: gold
+  `#C9A227` was repeated eight times, but the emerald `#0B5D3B` was dropped and
+  replaced with a generic "green". Put any load-bearing hex back by hand.
+* **Rewriting is not a guarantee of legible text.** Measured on the multi-string
+  poster in `RESULTS.md`: at 2K the raw prompt already rendered the tagline and the
+  date, and the title stayed unreadable in both the raw and the rewritten render.
+  Use the rewriter for layout, typography and text inventory, use `--vae-tiling true`
+  for the allocator, then read the strings back with `tesseract` to check.
+
 ## Host GPU budget
 
 GPU 2 is 24 GB and shared with z-image (~1.4 GB resident). The 2K text path now
